@@ -31,4 +31,5 @@ func Run(appContainer app.App, cfg config.ServerConfig) error {
 func registerSMSAPI(appContainer app.App, cfg config.ServerConfig, router fiber.Router) {
 	smsServiceGetter := smsServiceGetter(appContainer, cfg)
 	router.Post("/sms/send", SendSMSMessage(smsServiceGetter))
+	router.Get("/sms/:id", GetSMSMessage(smsServiceGetter))
 }

@@ -66,9 +66,85 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/sms/{id}": {
+            "get": {
+                "description": "Get a SMS message by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SMS"
+                ],
+                "summary": "Get SMS message",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "SMS ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/presenter.SMSResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "presenter.SMSResp": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "recipient": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/presenter.Status"
+                }
+            }
+        },
         "presenter.SendSMSReq": {
             "type": "object",
             "properties": {
