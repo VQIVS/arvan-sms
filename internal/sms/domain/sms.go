@@ -10,6 +10,11 @@ const (
 	Failed    Status = "failed"
 )
 
+type SMSFilter struct {
+	ID     SMSID
+	Status Status
+}
+
 type SMSID uint
 
 type SMS struct {

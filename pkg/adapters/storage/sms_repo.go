@@ -29,11 +29,22 @@ func (r *smsRepo) Create(ctx context.Context, SMS domain.SMS) (domain.SMSID, err
 	return domain.SMSID(sms.ID), nil
 }
 
-func (r *smsRepo) GetByID(ctx context.Context, id domain.SMSID) (*domain.SMS, error) {
+func (r *smsRepo) GetByFilter(ctx context.Context, filter *domain.SMSFilter) (*domain.SMS, error) {
 	var sms types.SMS
-	if err := r.db.WithContext(ctx).First(&sms, id).Error; err != nil {
-		return nil, err
+	query := r.db.WithContext(ctx).Model(&types.SMS{})
+
+	if filter.ID != 0 {
+		query = query.Where("id = ?", filter.ID)
 	}
+	if filter.Status != "" {
+		query = query.Where("status = ?", filter.Status)
+	}
+
+	tx := query.First(&sms)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
 	return mapper.SMSStorage2Domain(&sms), nil
 }
 
