@@ -1,0 +1,15 @@
+{
+    "db": {
+        "host": "localhost",
+        "port": 5432,
+        "database": "sms",
+        "user": "postgres",
+        "password": "changeme"
+    },
+    "server": {
+        "httpPort": 8080
+    },
+    "rabbit": {
+        "url": "amqp://guest:guest@localhost:5672/"
+    }
+}
