@@ -35,6 +35,5 @@ func NewPsqlGormConnection(opt DBConnOptions) (*gorm.DB, error) {
 
 func Migrate(db *gorm.DB) {
 	migrator := db.Migrator()
-	// storage models
 	migrator.AutoMigrate(&types.SMS{})
 }
