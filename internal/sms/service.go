@@ -3,9 +3,11 @@ package sms
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sms-dispatcher/internal/sms/domain"
 	"sms-dispatcher/internal/sms/event"
 	"sms-dispatcher/internal/sms/port"
+	mno "sms-dispatcher/pkg/adapters/mno_mock"
 	"sms-dispatcher/pkg/adapters/rabbit"
 )
 
@@ -64,7 +66,21 @@ func (s *service) UpdateSMSStatus(ctx context.Context, body []byte) error {
 	if err != nil {
 		return err
 	}
-	smsDomain.Status = string(sms.Status)
+	switch sms.Status {
+	case event.StatusFailed:
+		smsDomain.Status = string(sms.Status)
+		return s.repo.Update(ctx, *smsDomain)
+	case event.StatusSuccess:
+		mnoStatus, err := mno.SendSMSViaMNO()
+		if err != nil {
+			return err
+		}
+		if mnoStatus != mno.SuccessCode {
+			return errors.New("failed to send SMS via MNO, retrying")
+		}
+		smsDomain.Status = string(sms.Status)
+	}
+
 	return s.repo.Update(ctx, *smsDomain)
 
 }
