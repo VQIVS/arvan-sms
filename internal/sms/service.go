@@ -9,6 +9,7 @@ import (
 	"sms-dispatcher/internal/sms/port"
 	mno "sms-dispatcher/pkg/adapters/mno_mock"
 	"sms-dispatcher/pkg/adapters/rabbit"
+	"sms-dispatcher/pkg/constants"
 )
 
 type service struct {
@@ -50,7 +51,7 @@ func (s *service) UserBalanceUpdate(ctx context.Context, user event.UserBalanceE
 	if err != nil {
 		return err
 	}
-	return s.rabbit.Publish(body, "sms.user.balance.update") //FIXME: do not hardcode
+	return s.rabbit.Publish(body, constants.QueueUserBalanceUpdate)
 }
 
 func (s *service) UpdateSMSStatus(ctx context.Context, body []byte) error {

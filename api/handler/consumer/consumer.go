@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sms-dispatcher/app"
+	"sms-dispatcher/pkg/constants"
 	"sms-dispatcher/pkg/logger"
 )
 
@@ -27,7 +28,7 @@ func (h *Handler) Start(ctx context.Context) error {
 
 	svc := h.app.SMSService(context.Background())
 
-	if err := h.app.Rabbit().Consume("finance.sms.update", func(body []byte) error {
+	if err := h.app.Rabbit().Consume(constants.QueueSMSUpdate, func(body []byte) error {
 		return svc.UpdateSMSStatus(context.Background(), body)
 	}); err != nil {
 		return err

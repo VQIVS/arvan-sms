@@ -10,7 +10,13 @@
         "httpPort": 8080
     },
     "rabbit": {
-        "url": "amqp://guest:guest@localhost:5672/"
+        "url": "amqp://guest:guest@localhost:5672/",
+        "queues": [
+            {
+                "name": "sms.user.balance.update",
+                "durable": true
+            }
+        ]
     }
-   
+
 }
