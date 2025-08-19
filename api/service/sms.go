@@ -39,6 +39,7 @@ func (s *SMSService) SendSMS(ctx context.Context, req *presenter.SendSMSReq) (*p
 	}
 
 	return &presenter.SendSMSResp{
+		ID:      uint(id),
 		Status:  presenter.Pending,
 		Message: "SMS created successfully",
 	}, nil

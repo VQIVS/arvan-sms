@@ -15,6 +15,7 @@ type SendSMSReq struct {
 }
 
 type SendSMSResp struct {
+	ID      uint   `json:"id"`
 	Status  Status `json:"status"`
 	Message string `json:"message"`
 }
