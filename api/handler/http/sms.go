@@ -2,7 +2,6 @@ package http
 
 import (
 	"sms-dispatcher/api/presenter"
-	"sms-dispatcher/api/service"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,9 +18,9 @@ import (
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /sms/send [post]
-func SendSMSMessage(svcGetter ServiceGetter[*service.SMSService]) fiber.Handler {
+func SendSMSMessage(svcGetter SMSServiceGetter) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		svc := svcGetter(c.UserContext())
+		svc := svcGetter.GetSMSService(c.UserContext())
 		var req presenter.SendSMSReq
 		if err := c.BodyParser(&req); err != nil {
 			return fiber.ErrBadRequest
@@ -46,9 +45,9 @@ func SendSMSMessage(svcGetter ServiceGetter[*service.SMSService]) fiber.Handler 
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /sms/{id} [get]
-func GetSMSMessage(svcGetter ServiceGetter[*service.SMSService]) fiber.Handler {
+func GetSMSMessage(svcGetter SMSServiceGetter) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		svc := svcGetter(c.UserContext())
+		svc := svcGetter.GetSMSService(c.UserContext())
 		smsIDStr := c.Params("id")
 		smsIDUint, err := strconv.ParseUint(smsIDStr, 10, 32)
 		if err != nil {

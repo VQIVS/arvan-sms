@@ -7,8 +7,16 @@ import (
 	"sms-dispatcher/config"
 )
 
-func smsServiceGetter(appContainer app.App, cfg config.ServerConfig) ServiceGetter[*service.SMSService] {
-	return func(ctx context.Context) *service.SMSService {
-		return service.NewSMSService(appContainer.SMSService(ctx))
+type smsServiceProvider struct {
+	appContainer app.App
+}
+
+func (p *smsServiceProvider) GetSMSService(ctx context.Context) *service.SMSService {
+	return service.NewSMSService(p.appContainer.SMSService(ctx))
+}
+
+func newSMSServiceGetter(appContainer app.App, cfg config.ServerConfig) SMSServiceGetter {
+	return &smsServiceProvider{
+		appContainer: appContainer,
 	}
 }

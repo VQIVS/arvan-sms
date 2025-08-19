@@ -15,7 +15,7 @@ import (
 func Run(appContainer app.App, cfg config.ServerConfig) error {
 	router := fiber.New()
 
-	api := router.Group("/api/v1", setUserContext)
+	api := router.Group("/api/v1")
 
 	registerSMSAPI(appContainer, cfg, api)
 
@@ -29,7 +29,7 @@ func Run(appContainer app.App, cfg config.ServerConfig) error {
 }
 
 func registerSMSAPI(appContainer app.App, cfg config.ServerConfig, router fiber.Router) {
-	smsServiceGetter := smsServiceGetter(appContainer, cfg)
+	smsServiceGetter := newSMSServiceGetter(appContainer, cfg)
 	router.Post("/sms/send", SendSMSMessage(smsServiceGetter))
 	router.Get("/sms/:id", GetSMSMessage(smsServiceGetter))
 }

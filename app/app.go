@@ -8,7 +8,6 @@ import (
 	"sms-dispatcher/internal/sms/port"
 	"sms-dispatcher/pkg/adapters/rabbit"
 	"sms-dispatcher/pkg/adapters/storage"
-	appCtx "sms-dispatcher/pkg/context"
 	"sms-dispatcher/pkg/logger"
 	"sms-dispatcher/pkg/postgres"
 
@@ -40,16 +39,12 @@ func (a *app) Logger() *slog.Logger {
 }
 
 func (a *app) SMSService(ctx context.Context) port.Service {
-	db := appCtx.GetDB(ctx)
-	if db == nil {
-		if a.smsService == nil {
-			a.smsService = a.smsServiceWithDB(a.db)
-		}
-		return a.smsService
+	if a.smsService == nil {
+		a.smsService = sms.NewService(storage.NewSMSRepo(a.db), a.rabbit)
 	}
-
-	return a.smsServiceWithDB(db)
+	return a.smsService
 }
+
 func (a *app) setDB() error {
 	db, err := postgres.NewPsqlGormConnection(postgres.DBConnOptions{
 		User:   a.cfg.DB.User,
