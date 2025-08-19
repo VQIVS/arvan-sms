@@ -1,8 +1,6 @@
 package rabbit
 
 import (
-	"sms-dispatcher/pkg/logger"
-
 	"github.com/streadway/amqp"
 )
 
@@ -24,7 +22,7 @@ func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 
 	go func() {
 		for d := range msgs {
-			logger.NewLogger().Info("processing message from queue", "queue", queueName)
+			r.Logger.Info("processing message from queue", "queue", queueName)
 
 			if err := handler(d.Body); err != nil {
 				attempts := 0
@@ -70,15 +68,15 @@ func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 						},
 					)
 					if pubErr != nil {
-						logger.NewLogger().Error("failed to publish to retry queue", "queue", retryQ, "error", pubErr)
+						r.Logger.Error("failed to publish to retry queue", "queue", retryQ, "error", pubErr)
 						_ = d.Nack(false, true)
 						continue
 					}
 
 					if err := d.Ack(false); err != nil {
-						logger.NewLogger().Error("failed to ack original message after republish", "error", err)
+						r.Logger.Error("failed to ack original message after republish", "error", err)
 					} else {
-						logger.NewLogger().Info("republished message to retry queue", "queue", retryQ, "attempt", attempts)
+						r.Logger.Info("republished message to retry queue", "queue", retryQ, "attempt", attempts)
 					}
 					continue
 				}
@@ -104,22 +102,22 @@ func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 						DeliveryMode: amqp.Persistent,
 					},
 				); err != nil {
-					logger.NewLogger().Error("failed to publish to dlq", "queue", dlq, "error", err)
+					r.Logger.Error("failed to publish to dlq", "queue", dlq, "error", err)
 					_ = d.Nack(false, true)
 					continue
 				}
 
 				if err := d.Ack(false); err != nil {
-					logger.NewLogger().Error("failed to ack original message after dlq publish", "error", err)
+					r.Logger.Error("failed to ack original message after dlq publish", "error", err)
 				} else {
-					logger.NewLogger().Info("moved message to DLQ", "queue", dlq, "attempt", attempts)
+					r.Logger.Info("moved message to DLQ", "queue", dlq, "attempt", attempts)
 				}
 
 			} else {
 				if err := d.Ack(false); err != nil {
-					logger.NewLogger().Error("failed to ack message", "queue", queueName, "error", err)
+					r.Logger.Error("failed to ack message", "queue", queueName, "error", err)
 				} else {
-					logger.NewLogger().Info("successfully processed message from queue", "queue", queueName)
+					r.Logger.Info("successfully processed message from queue", "queue", queueName)
 				}
 			}
 		}

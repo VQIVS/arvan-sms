@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"log/slog"
 	"sms-dispatcher/config"
 	"sms-dispatcher/internal/sms"
 	"sms-dispatcher/internal/sms/port"
 	"sms-dispatcher/pkg/adapters/rabbit"
 	"sms-dispatcher/pkg/adapters/storage"
 	appCtx "sms-dispatcher/pkg/context"
+	"sms-dispatcher/pkg/logger"
 	"sms-dispatcher/pkg/postgres"
 
 	"gorm.io/gorm"
@@ -18,6 +20,7 @@ type app struct {
 	cfg        config.Config
 	smsService port.Service
 	rabbit     *rabbit.Rabbit
+	logger     *slog.Logger
 }
 
 func (a *app) DB() *gorm.DB {
@@ -30,6 +33,10 @@ func (a *app) Rabbit() *rabbit.Rabbit {
 
 func (a *app) Config() config.Config {
 	return a.cfg
+}
+
+func (a *app) Logger() *slog.Logger {
+	return a.logger
 }
 
 func (a *app) SMSService(ctx context.Context) port.Service {
@@ -64,8 +71,10 @@ func (a *app) setDB() error {
 }
 
 func NewApp(cfg config.Config) (App, error) {
+	l := logger.GetLogger()
 	a := &app{
-		cfg: cfg,
+		cfg:    cfg,
+		logger: l,
 	}
 
 	if err := a.setDB(); err != nil {
@@ -73,12 +82,11 @@ func NewApp(cfg config.Config) (App, error) {
 	}
 	// initialize rabbit connection if configured
 	if cfg.Rabbit.URL != "" {
-		r, err := rabbit.NewRabbit(cfg.Rabbit.URL)
+		r, err := rabbit.NewRabbit(cfg.Rabbit.URL, l)
 		if err != nil {
 			return nil, err
 		}
 		a.rabbit = r
-		// initialize queues from config
 		if err := a.rabbit.InitQueues(cfg.Rabbit.Queues); err != nil {
 			return nil, err
 		}

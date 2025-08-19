@@ -8,6 +8,6 @@ import (
 )
 
 func setUserContext(c *fiber.Ctx) error {
-	c.SetUserContext(context.NewAppContext(c.UserContext(), context.WithLogger(logger.NewLogger())))
+	c.SetUserContext(context.NewAppContext(c.UserContext(), context.WithLogger(logger.GetLogger())))
 	return c.Next()
 }

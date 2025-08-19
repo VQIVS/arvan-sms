@@ -20,7 +20,7 @@ func main() {
 	}
 
 	h := consumer.New(a)
-	logger.NewLogger().Info("consumer started")
+	logger.GetLogger().Info("consumer started")
 
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)

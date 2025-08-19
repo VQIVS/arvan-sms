@@ -2,21 +2,26 @@ package consumer
 
 import (
 	"context"
+	"log/slog"
 	"sms-dispatcher/app"
 	"sms-dispatcher/pkg/logger"
 )
 
 type Handler struct {
-	app app.App
+	app    app.App
+	logger *slog.Logger
 }
 
 func New(a app.App) *Handler {
-	return &Handler{app: a}
+	return &Handler{
+		app:    a,
+		logger: logger.GetLogger(),
+	}
 }
 
 func (h *Handler) Start(ctx context.Context) error {
 	if h.app == nil || h.app.Rabbit() == nil {
-		logger.NewLogger().Info("no rabbit configured, consumer won't start")
+		h.logger.Info("no rabbit configured, consumer won't start")
 		return nil
 	}
 
@@ -29,6 +34,6 @@ func (h *Handler) Start(ctx context.Context) error {
 	}
 	<-ctx.Done()
 	h.app.Rabbit().Close()
-	logger.NewLogger().Info("consumer stopped")
+	h.logger.Info("consumer stopped")
 	return nil
 }
