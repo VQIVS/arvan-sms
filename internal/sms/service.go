@@ -28,7 +28,7 @@ func (s *service) CreateSMS(ctx context.Context, recipient string, message strin
 	sms := domain.SMS{
 		Recipient: recipient,
 		Message:   message,
-		Status:    string(domain.Failed),
+		Status:    string(domain.Pending),
 	}
 	smsID, err := s.repo.Create(ctx, sms)
 	if err != nil {
@@ -51,6 +51,7 @@ func (s *service) UserBalanceUpdate(ctx context.Context, user event.UserBalanceE
 	if err != nil {
 		return err
 	}
+	s.rabbit.Logger.Info("publishing user balance update", "userID", user.UserID, "amount", user.Amount)
 	return s.rabbit.Publish(body, constants.QueueUserBalanceUpdate)
 }
 

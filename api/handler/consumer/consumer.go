@@ -29,8 +29,10 @@ func (h *Handler) Start(ctx context.Context) error {
 	svc := h.app.SMSService(context.Background())
 
 	if err := h.app.Rabbit().Consume(constants.QueueSMSUpdate, func(body []byte) error {
+		h.logger.Info("received message from queue", "queue", constants.QueueSMSUpdate, "message", string(body))
 		return svc.UpdateSMSStatus(context.Background(), body)
 	}); err != nil {
+		h.logger.Error("failed to start consumer", "error", err)
 		return err
 	}
 	<-ctx.Done()
