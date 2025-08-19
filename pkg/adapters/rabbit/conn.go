@@ -1,6 +1,8 @@
 package rabbit
 
 import (
+	"sms-dispatcher/config"
+
 	"github.com/streadway/amqp"
 )
 
@@ -25,8 +27,26 @@ func NewRabbit(url string) (*Rabbit, error) {
 func (r *Rabbit) Close() {
 	if r.Ch != nil {
 		_ = r.Ch.Close()
-	}
-	if r.Conn != nil {
 		_ = r.Conn.Close()
 	}
+}
+
+func (r *Rabbit) InitQueues(queues []config.QueueConfig) error {
+	if r == nil || r.Ch == nil {
+		return nil
+	}
+	for _, q := range queues {
+		_, err := r.Ch.QueueDeclare(
+			q.Name,
+			q.Durable,
+			false,
+			false,
+			false,
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -78,6 +78,10 @@ func NewApp(cfg config.Config) (App, error) {
 			return nil, err
 		}
 		a.rabbit = r
+		// initialize queues from config
+		if err := a.rabbit.InitQueues(cfg.Rabbit.Queues); err != nil {
+			return nil, err
+		}
 	}
 	return a, nil
 }
