@@ -50,9 +50,6 @@ This directory contains unit tests for the SMS service in the SMS Gateway applic
 # Run all tests
 go test ./tests/...
 
-# Run with coverage
-go test -cover ./tests/...
-
 # Run benchmarks
 go test -bench=. ./tests/
 
@@ -67,9 +64,6 @@ go test -run TestSMSService_SendSMS_Success ./tests/...
 ```bash
 # Basic tests
 ./tests/run_tests.sh basic
-
-# Coverage report
-./tests/run_tests.sh coverage
 
 # Benchmarks
 ./tests/run_tests.sh bench
