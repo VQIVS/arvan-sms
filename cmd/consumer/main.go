@@ -24,9 +24,15 @@ func main() {
 	h := consumer.New(a)
 	logger.GetLogger().With("trace_id", uuid.NewString()).Info("consumer started")
 
-	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer stop()
+
+	defer func() {
+		if a.Rabbit() != nil {
+			logger.GetLogger().With("trace_id", uuid.NewString()).Info("closing rabbit connection")
+			a.Rabbit().Close()
+		}
+	}()
 
 	if err := h.Start(ctx); err != nil {
 		log.Printf("consumer stopped with error: %v", err)

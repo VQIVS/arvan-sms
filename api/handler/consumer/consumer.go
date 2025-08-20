@@ -40,7 +40,11 @@ func (h *Handler) Start(ctx context.Context) error {
 		return err
 	}
 	<-ctx.Done()
-	// h.app.Rabbit().Close()
+
+	if h.app.Rabbit() != nil {
+		h.logger.With("trace_id", uuid.NewString()).Info("closing rabbit connection")
+		h.app.Rabbit().Close()
+	}
 	h.logger.With("trace_id", uuid.NewString()).Info("consumer stopped")
 	return nil
 }
