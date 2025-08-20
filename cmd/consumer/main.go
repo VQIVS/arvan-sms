@@ -9,8 +9,6 @@ import (
 	"sms-dispatcher/app"
 	"sms-dispatcher/config"
 	"sms-dispatcher/pkg/logger"
-
-	"github.com/google/uuid"
 )
 
 func main() {
@@ -22,14 +20,14 @@ func main() {
 	}
 
 	h := consumer.New(a)
-	logger.GetLogger().With("trace_id", uuid.NewString()).Info("consumer started")
+	logger.GetTracedLogger().Info("consumer started")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer stop()
 
 	defer func() {
 		if a.Rabbit() != nil {
-			logger.GetLogger().With("trace_id", uuid.NewString()).Info("closing rabbit connection")
+			logger.GetTracedLogger().Info("closing rabbit connection")
 			a.Rabbit().Close()
 		}
 	}()

@@ -3,12 +3,13 @@ package rabbit
 import (
 	"log/slog"
 	"sms-dispatcher/pkg/constants"
+	"sms-dispatcher/pkg/logger"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 )
 
+// TODO: do we need lock here?
 func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 	msgs, err := r.Ch.Consume(
 		queueName,
@@ -33,18 +34,17 @@ func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 }
 
 func (r *Rabbit) processMessage(d amqp.Delivery, queueName string, handler func([]byte) error) {
-	traceID := uuid.NewString()
-	logger := r.Logger.With("trace_id", traceID, "queue", queueName)
+	tracedLogger := logger.GetTracedLogger().With("queue", queueName)
 
-	logger.Info("processing message from queue")
+	tracedLogger.Info("processing message from queue")
 
-	if err := r.retryHandler(d.Body, handler, logger); err != nil {
-		logger.Error("message processing failed after all retries", "error", err)
-		r.nackMessage(d, logger)
+	if err := r.retryHandler(d.Body, handler, tracedLogger); err != nil {
+		tracedLogger.Error("message processing failed after all retries", "error", err)
+		r.nackMessage(d, tracedLogger)
 		return
 	}
 
-	r.ackMessage(d, logger)
+	r.ackMessage(d, tracedLogger)
 }
 
 func (r *Rabbit) retryHandler(body []byte, handler func([]byte) error, logger *slog.Logger) error {
