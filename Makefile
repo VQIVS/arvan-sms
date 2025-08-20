@@ -7,18 +7,11 @@ build:
 test:
 	go test -v ./...
 
-test-file:
-	@read -p "Enter test file path: " file; \
-	go test -v $$file
-
 clean:
 	rm -rf ./bin
 
 swagger:
 	swag init -g ./cmd/api/main.go -o ./docs
-
-docker-build:
-	docker build -t sms-dispatcher:latest -f ./build/Dockerfile .
 
 fmt:
 	go fmt ./...
@@ -40,4 +33,4 @@ run-consumer:
 	go run ./cmd/consumer/main.go
 
 run-dev:
-	$(MAKE) build && ($(MAKE) run-api & $(MAKE) run-consumer)
+	$(MAKE) build && $(MAKE) swagger && ($(MAKE) run-api & $(MAKE) run-consumer)
