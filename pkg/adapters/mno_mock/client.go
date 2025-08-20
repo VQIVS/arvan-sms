@@ -18,3 +18,7 @@ func SendSMSViaMNO() (StatusCode, error) {
 	}
 	return SuccessCode, nil
 }
+
+func JustFail() (StatusCode, error) {
+	return FailedCode, nil
+}

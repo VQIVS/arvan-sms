@@ -1,7 +1,9 @@
 package rabbit
 
 import (
+	"log/slog"
 	"sms-dispatcher/pkg/constants"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
@@ -21,110 +23,72 @@ func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 		return err
 	}
 
-	const maxAttempts = 3
-
 	go func() {
 		for d := range msgs {
-			r.Logger.With("trace_id", uuid.NewString()).Info("processing message from queue", "queue", queueName)
-
-			if err := handler(d.Body); err != nil {
-				attempts := 0
-				if d.Headers != nil {
-					if v, ok := d.Headers["attempts"]; ok {
-						switch t := v.(type) {
-						case int:
-							attempts = t
-						case int32:
-							attempts = int(t)
-						case int64:
-							attempts = int(t)
-						case float32:
-							attempts = int(t)
-						case float64:
-							attempts = int(t)
-						}
-					}
-				}
-
-				attempts++
-
-				if attempts <= maxAttempts {
-					retryQ := queueName + ".retry"
-					headers := amqp.Table{}
-					if d.Headers != nil {
-						for k, v := range d.Headers {
-							headers[k] = v
-						}
-					}
-					headers["attempts"] = attempts
-
-					pubErr := r.Ch.Publish(
-						"",
-						retryQ,
-						false,
-						false,
-						amqp.Publishing{
-							Headers:      headers,
-							ContentType:  d.ContentType,
-							Body:         d.Body,
-							DeliveryMode: amqp.Persistent,
-						},
-					)
-					if pubErr != nil {
-						r.Logger.With("trace_id", uuid.NewString()).Error("failed to publish to retry queue", "queue", retryQ, "error", pubErr)
-						_ = d.Nack(false, true)
-						continue
-					}
-
-					if err := d.Ack(false); err != nil {
-						r.Logger.With("trace_id", uuid.NewString()).Error("failed to ack original message after republish", "error", err)
-					} else {
-						r.Logger.With("trace_id", uuid.NewString()).Info("republished message to retry queue", "queue", retryQ, "attempt", attempts)
-					}
-					continue
-				}
-
-				dlq := queueName + ".dlq"
-				headers := amqp.Table{}
-				if d.Headers != nil {
-					for k, v := range d.Headers {
-						headers[k] = v
-					}
-				}
-				headers["attempts"] = attempts
-
-				if err := r.Ch.Publish(
-					"",
-					dlq,
-					false,
-					false,
-					amqp.Publishing{
-						Headers:      headers,
-						ContentType:  d.ContentType,
-						Body:         d.Body,
-						DeliveryMode: amqp.Persistent,
-					},
-				); err != nil {
-					r.Logger.With("trace_id", uuid.NewString()).Error("failed to publish to dlq", "queue", dlq, "error", err)
-					_ = d.Nack(false, true)
-					continue
-				}
-
-				if err := d.Ack(false); err != nil {
-					r.Logger.With("trace_id", uuid.NewString()).Error("failed to ack original message after dlq publish", "error", err)
-				} else {
-					r.Logger.With("trace_id", uuid.NewString()).Info("moved message to DLQ", "queue", dlq, "attempt", attempts)
-				}
-
-			} else {
-				if err := d.Ack(false); err != nil {
-					r.Logger.With("trace_id", uuid.NewString()).Error("failed to ack message", "queue", queueName, "error", err)
-				} else {
-					r.Logger.With("trace_id", uuid.NewString()).Info("successfully processed message from queue", "queue", queueName)
-				}
-			}
+			r.processMessage(d, queueName, handler)
 		}
 	}()
 
 	return nil
+}
+
+func (r *Rabbit) processMessage(d amqp.Delivery, queueName string, handler func([]byte) error) {
+	traceID := uuid.NewString()
+	logger := r.Logger.With("trace_id", traceID, "queue", queueName)
+
+	logger.Info("processing message from queue")
+
+	if err := r.retryHandler(d.Body, handler, logger); err != nil {
+		logger.Error("message processing failed after all retries", "error", err)
+		r.nackMessage(d, logger)
+		return
+	}
+
+	r.ackMessage(d, logger)
+}
+
+func (r *Rabbit) retryHandler(body []byte, handler func([]byte) error, logger *slog.Logger) error {
+	const maxAttempts = 3
+	const baseDelay = 100 * time.Millisecond
+
+	var lastErr error
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if err := handler(body); err != nil {
+			lastErr = err
+			logger.Warn("message processing failed",
+				"attempt", attempt,
+				"max_attempts", maxAttempts,
+				"error", err)
+
+			if attempt < maxAttempts {
+				delay := time.Duration(attempt) * baseDelay
+				logger.Debug("retrying after delay", "delay", delay)
+				time.Sleep(delay)
+				continue
+			}
+		} else {
+			// Success
+			if attempt > 1 {
+				logger.Info("message processed successfully after retries", "attempts", attempt)
+			} else {
+				logger.Info("message processed successfully")
+			}
+			return nil
+		}
+	}
+
+	return lastErr
+}
+
+func (r *Rabbit) ackMessage(d amqp.Delivery, logger *slog.Logger) {
+	if err := d.Ack(false); err != nil {
+		logger.Error("failed to ack message", "error", err)
+	}
+}
+
+func (r *Rabbit) nackMessage(d amqp.Delivery, logger *slog.Logger) {
+	if err := d.Nack(false, false); err != nil {
+		logger.Error("failed to nack message", "error", err)
+	}
 }

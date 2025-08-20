@@ -21,6 +21,8 @@ definitions:
     type: object
   presenter.SendSMSResp:
     properties:
+      id:
+        type: integer
       message:
         type: string
       status:

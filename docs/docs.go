@@ -162,6 +162,9 @@ const docTemplate = `{
         "presenter.SendSMSResp": {
             "type": "object",
             "properties": {
+                "id": {
+                    "type": "integer"
+                },
                 "message": {
                     "type": "string"
                 },
