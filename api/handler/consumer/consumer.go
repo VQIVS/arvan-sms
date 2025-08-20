@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sms-dispatcher/app"
+	"sms-dispatcher/pkg/adapters/rabbit"
 	"sms-dispatcher/pkg/constants"
 	"sms-dispatcher/pkg/logger"
 )
@@ -27,16 +28,17 @@ func (h *Handler) Start(ctx context.Context) error {
 	}
 
 	svc := h.app.SMSService(context.Background())
+	queue := rabbit.GetQueueName(constants.KeySMSUpdate)
 
-	if err := h.app.Rabbit().Consume(constants.QueueSMSUpdate, func(body []byte) error {
-		h.logger.Info("received message from queue", "queue", constants.QueueSMSUpdate, "message", string(body))
+	if err := h.app.Rabbit().Consume(queue, func(body []byte) error {
+		h.logger.Info("received message from queue", "queue", queue, "message", string(body))
 		return svc.UpdateSMSStatus(context.Background(), body)
 	}); err != nil {
 		h.logger.Error("failed to start consumer", "error", err)
 		return err
 	}
 	<-ctx.Done()
-	h.app.Rabbit().Close()
+	// h.app.Rabbit().Close()
 	h.logger.Info("consumer stopped")
 	return nil
 }

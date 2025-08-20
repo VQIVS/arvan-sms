@@ -52,7 +52,7 @@ func (s *service) UserBalanceUpdate(ctx context.Context, user event.UserBalanceE
 		return err
 	}
 	s.rabbit.Logger.Info("publishing user balance update", "userID", user.UserID, "amount", user.Amount)
-	return s.rabbit.Publish(body, constants.QueueUserBalanceUpdate)
+	return s.rabbit.Publish(body, constants.KeyBalanceUpdate)
 }
 
 func (s *service) UpdateSMSStatus(ctx context.Context, body []byte) error {

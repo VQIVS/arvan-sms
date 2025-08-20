@@ -8,6 +8,7 @@ import (
 	"sms-dispatcher/internal/sms/port"
 	"sms-dispatcher/pkg/adapters/rabbit"
 	"sms-dispatcher/pkg/adapters/storage"
+	"sms-dispatcher/pkg/constants"
 	"sms-dispatcher/pkg/logger"
 	"sms-dispatcher/pkg/postgres"
 
@@ -82,7 +83,7 @@ func NewApp(cfg config.Config) (App, error) {
 			return nil, err
 		}
 		a.rabbit = r
-		if err := a.rabbit.InitQueues(cfg.Rabbit.Queues); err != nil {
+		if err := a.rabbit.InitQueues(constants.KeySMSUpdate); err != nil {
 			return nil, err
 		}
 	}
@@ -95,8 +96,4 @@ func NewMustApp(cfg config.Config) App {
 		panic(err)
 	}
 	return app
-}
-
-func (a *app) smsServiceWithDB(db *gorm.DB) port.Service {
-	return sms.NewService(storage.NewSMSRepo(db), a.rabbit)
 }

@@ -1,8 +1,7 @@
 package constants
 
 const (
-	QueueSMSUpdate         = "finance.sms.update"
-	QueueUserBalanceUpdate = "sms.user.balance.update"
-	TopicExchange          = "topic"
-	maxAttempts            = 3
+	KeySMSUpdate     = "finance.balance.update"
+	KeyBalanceUpdate = "sms.status.update"
+	maxAttempts      = 3
 )

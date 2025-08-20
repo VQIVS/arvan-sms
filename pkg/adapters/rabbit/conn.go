@@ -2,7 +2,7 @@ package rabbit
 
 import (
 	"log/slog"
-	"sms-dispatcher/config"
+	"sms-dispatcher/pkg/constants"
 	"sms-dispatcher/pkg/logger"
 
 	"github.com/streadway/amqp"
@@ -40,22 +40,27 @@ func (r *Rabbit) Close() {
 	}
 }
 
-func (r *Rabbit) InitQueues(queues []config.QueueConfig) error {
+func (r *Rabbit) InitQueues(queue string) error {
 	if r == nil || r.Ch == nil {
 		return nil
 	}
-	for _, q := range queues {
-		_, err := r.Ch.QueueDeclare(
-			q.Name,
-			q.Durable,
-			false,
-			false,
-			false,
-			nil,
-		)
-		if err != nil {
-			return err
-		}
+	queueName := GetQueueName(queue)
+	_, err := r.Ch.QueueDeclare(
+		queueName,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	r.Ch.QueueBind(queueName, constants.KeySMSUpdate, "amq.topic", false, nil)
+	if err != nil {
+		return err
 	}
-	return nil
+	return err
+}
+
+func GetQueueName(key string) string {
+	return "sms_" + key
 }
