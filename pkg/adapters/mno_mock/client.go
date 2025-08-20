@@ -1,5 +1,7 @@
 package mno
 
+import "sms-dispatcher/pkg/logger"
+
 type StatusCode uint
 
 const (
@@ -17,4 +19,9 @@ func SendSMSViaMNO() (StatusCode, error) {
 		return FailedCode, nil
 	}
 	return SuccessCode, nil
+}
+
+func FailAll() (StatusCode, error) {
+	logger.GetLogger().Info("MNO: failing all requests =================================================")
+	return FailedCode, nil
 }

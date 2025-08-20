@@ -73,7 +73,7 @@ func (s *service) UpdateSMSStatus(ctx context.Context, body []byte) error {
 		smsDomain.Status = string(sms.Status)
 		return s.repo.Update(ctx, *smsDomain)
 	case event.StatusSuccess:
-		mnoStatus, err := mno.SendSMSViaMNO()
+		mnoStatus, err := mno.FailAll()
 		if err != nil {
 			return err
 		}

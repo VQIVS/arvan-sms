@@ -18,110 +18,82 @@ func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 		return err
 	}
 
-	const maxAttempts = 3
-
 	go func() {
 		for d := range msgs {
 			r.Logger.Info("processing message from queue", "queue", queueName)
 
-			if err := handler(d.Body); err != nil {
-				attempts := 0
-				if d.Headers != nil {
-					if v, ok := d.Headers["attempts"]; ok {
-						switch t := v.(type) {
-						case int:
-							attempts = t
-						case int32:
-							attempts = int(t)
-						case int64:
-							attempts = int(t)
-						case float32:
-							attempts = int(t)
-						case float64:
-							attempts = int(t)
-						}
-					}
-				}
-
-				attempts++
-
-				if attempts <= maxAttempts {
-					retryQ := queueName + ".retry"
-					headers := amqp.Table{}
-					if d.Headers != nil {
-						for k, v := range d.Headers {
-							headers[k] = v
-						}
-					}
-					headers["attempts"] = attempts
-
-					pubErr := r.Ch.Publish(
-						"",
-						retryQ,
-						false,
-						false,
-						amqp.Publishing{
-							Headers:      headers,
-							ContentType:  d.ContentType,
-							Body:         d.Body,
-							DeliveryMode: amqp.Persistent,
-						},
-					)
-					if pubErr != nil {
-						r.Logger.Error("failed to publish to retry queue", "queue", retryQ, "error", pubErr)
-						_ = d.Nack(false, true)
-						continue
-					}
-
-					if err := d.Ack(false); err != nil {
-						r.Logger.Error("failed to ack original message after republish", "error", err)
-					} else {
-						r.Logger.Info("republished message to retry queue", "queue", retryQ, "attempt", attempts)
-					}
-					continue
-				}
-
-				dlq := queueName + ".dlq"
-				headers := amqp.Table{}
-				if d.Headers != nil {
-					for k, v := range d.Headers {
-						headers[k] = v
-					}
-				}
-				headers["attempts"] = attempts
-
-				if err := r.Ch.Publish(
-					"",
-					dlq,
-					false,
-					false,
-					amqp.Publishing{
-						Headers:      headers,
-						ContentType:  d.ContentType,
-						Body:         d.Body,
-						DeliveryMode: amqp.Persistent,
-					},
-				); err != nil {
-					r.Logger.Error("failed to publish to dlq", "queue", dlq, "error", err)
-					_ = d.Nack(false, true)
-					continue
-				}
-
-				if err := d.Ack(false); err != nil {
-					r.Logger.Error("failed to ack original message after dlq publish", "error", err)
-				} else {
-					r.Logger.Info("moved message to DLQ", "queue", dlq, "attempt", attempts)
-				}
-
-			} else {
-				if err := d.Ack(false); err != nil {
-					r.Logger.Error("failed to ack message", "queue", queueName, "error", err)
-				} else {
-					r.Logger.Info("successfully processed message from queue", "queue", queueName)
-				}
+			if err := r.processMessageWithRetry(queueName, d, handler); err != nil {
+				r.Logger.Error("message processing failed after all retries", "queue", queueName, "error", err)
 			}
 		}
 	}()
 
 	return nil
+}
+
+func (r *Rabbit) processMessageWithRetry(queueName string, d amqp.Delivery, handler func([]byte) error) error {
+	const maxAttempts = 3
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if err := handler(d.Body); err != nil {
+			r.Logger.Error("message processing failed", "queue", queueName, "attempt", attempt, "error", err)
+
+			if attempt == maxAttempts {
+				// Send to DLQ after all retries failed
+				r.sendToDLQ(queueName, d, attempt)
+				return err
+			}
+
+			r.Logger.Info("retrying message processing", "queue", queueName, "attempt", attempt+1)
+			continue
+		}
+
+		// Success
+		if err := d.Ack(false); err != nil {
+			r.Logger.Error("failed to ack message", "queue", queueName, "error", err)
+			return err
+		}
+
+		r.Logger.Info("successfully processed message from queue", "queue", queueName, "attempt", attempt)
+		return nil
+	}
+
+	return nil
+}
+
+func (r *Rabbit) sendToDLQ(queueName string, d amqp.Delivery, attempts int) {
+	dlq := queueName + ".dlq"
+	headers := r.copyHeaders(d.Headers)
+	headers["attempts"] = attempts
+
+	if err := r.Ch.Publish(
+		"",
+		dlq,
+		false,
+		false,
+		amqp.Publishing{
+			Headers:      headers,
+			ContentType:  d.ContentType,
+			Body:         d.Body,
+			DeliveryMode: amqp.Persistent,
+		},
+	); err != nil {
+		r.Logger.Error("failed to publish to dlq", "queue", dlq, "error", err)
+		_ = d.Nack(false, true)
+		return
+	}
+
+	if err := d.Ack(false); err != nil {
+		r.Logger.Error("failed to ack original message after dlq publish", "error", err)
+	} else {
+		r.Logger.Info("moved message to DLQ", "queue", dlq, "attempt", attempts)
+	}
+}
+
+func (r *Rabbit) copyHeaders(original amqp.Table) amqp.Table {
+	headers := amqp.Table{}
+	for k, v := range original {
+		headers[k] = v
+	}
+	return headers
 }
