@@ -10,6 +10,8 @@ import (
 	mno "sms-dispatcher/pkg/adapters/mno_mock"
 	"sms-dispatcher/pkg/adapters/rabbit"
 	"sms-dispatcher/pkg/constants"
+
+	"github.com/google/uuid"
 )
 
 type service struct {
@@ -51,7 +53,7 @@ func (s *service) UserBalanceUpdate(ctx context.Context, user event.UserBalanceE
 	if err != nil {
 		return err
 	}
-	s.rabbit.Logger.Info("publishing user balance update", "userID", user.UserID, "amount", user.Amount)
+	s.rabbit.Logger.With("trace_id", uuid.NewString()).Info("publishing user balance update", "userID", user.UserID, "amount", user.Amount)
 	return s.rabbit.Publish(body, constants.KeyBalanceUpdate)
 }
 

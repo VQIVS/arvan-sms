@@ -9,6 +9,8 @@ import (
 	"sms-dispatcher/app"
 	"sms-dispatcher/config"
 	"sms-dispatcher/pkg/logger"
+
+	"github.com/google/uuid"
 )
 
 func main() {
@@ -20,7 +22,7 @@ func main() {
 	}
 
 	h := consumer.New(a)
-	logger.GetLogger().Info("consumer started")
+	logger.GetLogger().With("trace_id", uuid.NewString()).Info("consumer started")
 
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
