@@ -21,7 +21,7 @@ func NewRabbit(url string, customLogger *slog.Logger) (*Rabbit, error) {
 	}
 	ch, err := conn.Channel()
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 
@@ -54,7 +54,9 @@ func (r *Rabbit) InitQueues(queue string) error {
 		nil,
 	)
 
-	r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.Exchange, false, nil)
+	if err := r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.Exchange, false, nil); err != nil {
+		return err
+	}
 	if err != nil {
 		return err
 	}

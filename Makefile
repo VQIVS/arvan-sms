@@ -1,4 +1,4 @@
-.PHONY: build run run-dev run-api run-consumer test clean swagger docker-build
+.PHONY: build run run-dev run-api run-consumer test clean swagger docker-build lint lint-fix lint-detailed check install-tools security
 
 build:
 	go build -o ./bin/api ./cmd/api
@@ -18,6 +18,35 @@ fmt:
 
 vet:
 	go vet ./...
+
+install-tools:
+	go install golang.org/x/tools/cmd/goimports@latest
+	go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+
+lint:
+	golangci-lint run
+
+lint-detailed:
+	golangci-lint run --enable-all --disable=gochecknoglobals,gochecknoinits,godot,gomnd,gomodguard,goerr113,wrapcheck,exhaustruct,ireturn,varnamelen,nosnakecase
+
+lint-fix:
+	golangci-lint run --fix
+	go fmt ./...
+	@if command -v goimports >/dev/null 2>&1; then \
+		goimports -local sms-dispatcher -w .; \
+	else \
+		echo "goimports not found. Run 'make install-tools' to install it."; \
+	fi
+
+security:
+	@if command -v gosec >/dev/null 2>&1; then \
+		gosec ./...; \
+	else \
+		echo "gosec not found. Run 'make install-tools' to install it."; \
+	fi
+
+check: fmt vet lint test
+	@echo "All checks passed!"
 
 deps:
 	go mod download

@@ -60,7 +60,9 @@ func (a *app) setDB() error {
 		return err
 	}
 	// auto migrate gorm
-	postgres.Migrate(db)
+	if err := postgres.Migrate(db); err != nil {
+		return err
+	}
 
 	a.db = db
 	return nil

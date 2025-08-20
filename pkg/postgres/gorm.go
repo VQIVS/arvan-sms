@@ -33,7 +33,7 @@ func NewPsqlGormConnection(opt DBConnOptions) (*gorm.DB, error) {
 	})
 }
 
-func Migrate(db *gorm.DB) {
+func Migrate(db *gorm.DB) error {
 	migrator := db.Migrator()
-	migrator.AutoMigrate(&types.SMS{})
+	return migrator.AutoMigrate(&types.SMS{})
 }
