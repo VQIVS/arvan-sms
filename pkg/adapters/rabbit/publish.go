@@ -2,6 +2,7 @@ package rabbit
 
 import (
 	"fmt"
+	"sms-dispatcher/pkg/constants"
 
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
@@ -9,7 +10,7 @@ import (
 
 func (r *Rabbit) Publish(Body []byte, Q string) error {
 	pubErr := r.Ch.Publish(
-		"amq.topic",
+		constants.Exchange,
 		Q,
 		false,
 		false,

@@ -1,6 +1,8 @@
 package rabbit
 
 import (
+	"sms-dispatcher/pkg/constants"
+
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 )
@@ -8,7 +10,7 @@ import (
 func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 	msgs, err := r.Ch.Consume(
 		queueName,
-		"amq.topic",
+		constants.Exchange,
 		false,
 		false,
 		false,

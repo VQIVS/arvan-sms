@@ -54,7 +54,7 @@ func (r *Rabbit) InitQueues(queue string) error {
 		nil,
 	)
 
-	r.Ch.QueueBind(queueName, constants.KeySMSUpdate, "amq.topic", false, nil)
+	r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.Exchange, false, nil)
 	if err != nil {
 		return err
 	}
