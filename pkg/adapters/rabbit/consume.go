@@ -13,7 +13,7 @@ import (
 func (r *Rabbit) Consume(queueName string, handler func([]byte) error) error {
 	msgs, err := r.Ch.Consume(
 		queueName,
-		constants.Exchange,
+		constants.TopicExchange,
 		false,
 		false,
 		false,

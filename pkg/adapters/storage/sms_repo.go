@@ -56,3 +56,11 @@ func (r *smsRepo) Update(ctx context.Context, SMS domain.SMS) error {
 	}
 	return nil
 }
+
+func (r *smsRepo) BeginTx(ctx context.Context) (*gorm.DB, error) {
+	tx := r.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	return tx, nil
+}

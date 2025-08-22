@@ -2,7 +2,6 @@ package rabbit
 
 import (
 	"log/slog"
-	"sms-dispatcher/pkg/constants"
 	"sms-dispatcher/pkg/logger"
 
 	"github.com/streadway/amqp"
@@ -40,29 +39,42 @@ func (r *Rabbit) Close() {
 	}
 }
 
-func (r *Rabbit) InitQueues(queue string) error {
+func (r *Rabbit) InitQueues(keys []string, exchange string) error {
+	for _, key := range keys {
+		if err := r.declareBind(exchange, key, true); err != nil {
+			r.Logger.Error("failed to declare and bind queue", "key", key, "error", err)
+			return err
+		}
+		r.Logger.Info("queue declared and bound", "key", key)
+	}
+	return nil
+}
+
+func (r *Rabbit) declareBind(exchange string, routingKey string, durable bool) error {
 	if r == nil || r.Ch == nil {
 		return nil
 	}
-	queueName := GetQueueName(queue)
-	_, err := r.Ch.QueueDeclare(
-		queueName,
-		true,
+	q, err := r.Ch.QueueDeclare(
+		GetQueueName(routingKey),
+		durable,
 		false,
 		false,
 		false,
 		nil,
 	)
-
-	if err := r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.Exchange, false, nil); err != nil {
-		return err
-	}
 	if err != nil {
 		return err
 	}
-	return err
-}
 
-func GetQueueName(key string) string {
-	return "sms_" + key
+	err = r.Ch.QueueBind(
+		q.Name,
+		routingKey,
+		exchange,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }

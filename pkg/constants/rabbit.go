@@ -1,7 +1,11 @@
 package constants
 
 const (
-	KeySMSUpdate     = "finance.balance.update"
+	// consumer routing keys
+	KeySMSUpdate = "finance.balance.update"
+	// producer routing keys
 	KeyBalanceUpdate = "sms.status.update"
-	Exchange         = "amq.topic"
+
+	TopicExchange = "amq.topic"
+	ServiceName   = "sms"
 )
