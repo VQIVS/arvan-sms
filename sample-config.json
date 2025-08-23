@@ -11,5 +11,6 @@
     },
     "rabbit": {
         "url": "amqp://guest:guest@rabbitmq:5672/"
-    }
+    },
+    "sms_fee" : "1"
 }

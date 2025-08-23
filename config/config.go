@@ -5,6 +5,7 @@ type Config struct {
 	Server ServerConfig `json:"server"`
 	// Redis  RedisConfig  `json:"redis"`
 	Rabbit RabbitConfig `json:"rabbit"`
+	SMSFee uint         `json:"sms_fee"`
 }
 
 type DBConfig struct {

@@ -29,7 +29,7 @@ func (s *SMSService) SendSMS(ctx context.Context, req *presenter.SendSMSReq) (*p
 			Domain: event.SMS,
 			UserID: req.UserID,
 			SMSID:  uint(id),
-			//FIXME: Define amount in some where better
+			//FIXME: Define amount in some where better like config
 			Amount: 1,
 			Type:   event.SMSCreditEvent,
 		},
