@@ -3,6 +3,7 @@ module sms-dispatcher
 go 1.24.4
 
 require (
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/gofiber/adaptor/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/google/uuid v1.6.0
