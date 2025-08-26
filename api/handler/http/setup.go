@@ -12,7 +12,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func Run(appContainer app.App, cfg config.ServerConfig) error {
+func Run(appContainer *app.App, cfg config.ServerConfig) error {
 	router := fiber.New()
 
 	api := router.Group("/api/v1")
@@ -28,7 +28,7 @@ func Run(appContainer app.App, cfg config.ServerConfig) error {
 	return router.Listen(fmt.Sprintf(":%d", cfg.HttpPort))
 }
 
-func registerSMSAPI(appContainer app.App, cfg config.ServerConfig, router fiber.Router) {
+func registerSMSAPI(appContainer *app.App, cfg config.ServerConfig, router fiber.Router) {
 	smsServiceGetter := newSMSServiceGetter(appContainer, cfg)
 	router.Post("/sms/send", SendSMSMessage(smsServiceGetter))
 	router.Get("/sms/:id", GetSMSMessage(smsServiceGetter))

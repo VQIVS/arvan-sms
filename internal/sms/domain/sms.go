@@ -10,12 +10,12 @@ const (
 	Failed    Status = "failed"
 )
 
+type SMSID uint
+
 type SMSFilter struct {
 	ID     SMSID
 	Status Status
 }
-
-type SMSID uint
 
 type SMS struct {
 	ID        SMSID     `json:"id"`

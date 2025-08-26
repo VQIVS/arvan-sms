@@ -64,22 +64,22 @@ func (a *App) setRabbit() error {
 	return nil
 }
 
-func NewApp(cfg config.Config) (App, error) {
+func NewApp(cfg config.Config) (*App, error) {
 	l := logger.GetLogger()
 	a := &App{
 		cfg:    cfg,
 		logger: l,
 	}
 	if err := a.setDB(); err != nil {
-		return App{}, err
+		return nil, err
 	}
 	if err := a.setRabbit(); err != nil {
-		return App{}, err
+		return nil, err
 	}
-	return *a, nil
+	return a, nil
 }
 
-func NewMustApp(cfg config.Config) App {
+func NewMustApp(cfg config.Config) *App {
 	app, err := NewApp(cfg)
 	if err != nil {
 		panic(err)
