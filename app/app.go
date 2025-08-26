@@ -15,7 +15,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type app struct {
+type App struct {
 	db         *gorm.DB
 	cfg        config.Config
 	smsService port.Service
@@ -23,30 +23,14 @@ type app struct {
 	logger     *slog.Logger
 }
 
-func (a *app) DB() *gorm.DB {
-	return a.db
-}
-
-func (a *app) Rabbit() *rabbit.Rabbit {
-	return a.rabbit
-}
-
-func (a *app) Config() config.Config {
-	return a.cfg
-}
-
-func (a *app) Logger() *slog.Logger {
-	return a.logger
-}
-
-func (a *app) SMSService(ctx context.Context) port.Service {
+func (a *App) SMSService(ctx context.Context) port.Service {
 	if a.smsService == nil {
 		a.smsService = sms.NewService(storage.NewSMSRepo(a.db), a.rabbit)
 	}
 	return a.smsService
 }
 
-func (a *app) setDB() error {
+func (a *App) setDB() error {
 	db, err := postgres.NewPsqlGormConnection(postgres.DBConnOptions{
 		User:   a.cfg.DB.User,
 		Pass:   a.cfg.DB.Password,
@@ -68,30 +52,31 @@ func (a *app) setDB() error {
 	return nil
 }
 
+func (a *App) setRabbit() error {
+	rabbit, err := rabbit.NewRabbitWithConn(
+		a.cfg.Rabbit.URL,
+		constants.TopicExchange,
+	)
+	if err != nil {
+		return err
+	}
+	a.rabbit = rabbit
+	return nil
+}
+
 func NewApp(cfg config.Config) (App, error) {
 	l := logger.GetLogger()
-	a := &app{
+	a := &App{
 		cfg:    cfg,
 		logger: l,
 	}
-
 	if err := a.setDB(); err != nil {
-		return nil, err
+		return App{}, err
 	}
-	// initialize rabbit connection if configured
-	if cfg.Rabbit.URL != "" {
-		r, err := rabbit.NewRabbit(cfg.Rabbit.URL, l)
-		if err != nil {
-			return nil, err
-		}
-		a.rabbit = r
-
-		if err := a.rabbit.InitQueues([]string{constants.KeySMSUpdate, constants.KeyBalanceUpdate}, constants.TopicExchange); err != nil {
-			return nil, err
-		}
-
+	if err := a.setRabbit(); err != nil {
+		return App{}, err
 	}
-	return a, nil
+	return *a, nil
 }
 
 func NewMustApp(cfg config.Config) App {
