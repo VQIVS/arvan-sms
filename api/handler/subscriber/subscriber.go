@@ -1,4 +1,4 @@
-package consumer
+package subscriber
 
 import (
 	"log/slog"
@@ -6,14 +6,17 @@ import (
 	"sms-dispatcher/pkg/logger"
 )
 
-type Handler struct {
+type Subscriber struct {
 	app    app.App
 	logger *slog.Logger
 }
 
-func New(a app.App) *Handler {
-	return &Handler{
+func NewSubscriber(a app.App) *Subscriber {
+	return &Subscriber{
 		app:    a,
 		logger: logger.GetLogger(),
 	}
+}
+
+func (s *Subscriber) StartHandler() {
 }

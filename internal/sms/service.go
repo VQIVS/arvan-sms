@@ -15,10 +15,10 @@ import (
 
 type service struct {
 	repo   port.Repo
-	rabbit *rabbit.Rabbit
+	rabbit *rabbit.RabbitProvider
 }
 
-func NewService(repo port.Repo, r *rabbit.Rabbit) port.Service {
+func NewService(repo port.Repo, r *rabbit.RabbitProvider) port.Service {
 	return &service{
 		repo:   repo,
 		rabbit: r,

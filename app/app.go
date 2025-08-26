@@ -19,7 +19,7 @@ type App struct {
 	db         *gorm.DB
 	cfg        config.Config
 	smsService port.Service
-	rabbit     *rabbit.Rabbit
+	rabbit     *rabbit.RabbitProvider
 	logger     *slog.Logger
 }
 

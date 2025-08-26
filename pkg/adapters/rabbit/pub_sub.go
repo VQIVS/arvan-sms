@@ -9,7 +9,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func (r *Rabbit) Publish(routingKey string, body []byte) error {
+func (r *RabbitProvider) Publish(routingKey string, body []byte) error {
 	if r.ch == nil {
 		return errors.New("no channel")
 	}
@@ -38,7 +38,7 @@ func (r *Rabbit) Publish(routingKey string, body []byte) error {
 	}
 }
 
-func (r *Rabbit) StartSubscribe(q QueueSpec, handler func(amqp.Delivery)) (<-chan amqp.Delivery, error) {
+func (r *RabbitProvider) StartSubscribe(q QueueSpec, handler func(amqp.Delivery)) (<-chan amqp.Delivery, error) {
 	prefetch := q.Prefetch
 	if prefetch <= 0 {
 		prefetch = 32

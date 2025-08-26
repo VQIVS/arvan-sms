@@ -7,8 +7,16 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func NewRabbitWithConn(uri, exchange string) (*Rabbit, error) {
-	r := &Rabbit{
+type RabbitProvider struct {
+	uri      string
+	exchange string
+	conn     *amqp.Connection
+	ch       *amqp.Channel
+	confirms chan amqp.Confirmation
+}
+
+func NewRabbitWithConn(uri, exchange string) (*RabbitProvider, error) {
+	r := &RabbitProvider{
 		uri:      uri,
 		exchange: exchange,
 	}
@@ -18,7 +26,7 @@ func NewRabbitWithConn(uri, exchange string) (*Rabbit, error) {
 	return r, nil
 }
 
-func (r *Rabbit) connect() error {
+func (r *RabbitProvider) connect() error {
 	c, err := amqp.Dial(r.uri)
 	if err != nil {
 		return err
@@ -45,7 +53,7 @@ func (r *Rabbit) connect() error {
 
 }
 
-func (r *Rabbit) DeclareAndBind(q QueueSpec) error {
+func (r *RabbitProvider) DeclareAndBind(q QueueSpec) error {
 	if err := r.validateQueueSpec(q); err != nil {
 		return err
 	}
@@ -58,7 +66,7 @@ func (r *Rabbit) DeclareAndBind(q QueueSpec) error {
 	return nil
 }
 
-func (r *Rabbit) Close() error {
+func (r *RabbitProvider) Close() error {
 	err := r.ch.Close()
 	if err != nil {
 		return err
@@ -70,7 +78,7 @@ func (r *Rabbit) Close() error {
 	return nil
 }
 
-func (r *Rabbit) validateQueueSpec(q QueueSpec) error {
+func (r *RabbitProvider) validateQueueSpec(q QueueSpec) error {
 	if q.Name == "" {
 		return errors.New("queue name required")
 	}
@@ -80,7 +88,7 @@ func (r *Rabbit) validateQueueSpec(q QueueSpec) error {
 	return nil
 }
 
-func (r *Rabbit) declareQueue(name string, args amqp.Table) error {
+func (r *RabbitProvider) declareQueue(name string, args amqp.Table) error {
 	_, err := r.ch.QueueDeclare(name, true, false, false, false, args)
 	if err != nil {
 		return fmt.Errorf("queue declare %s: %w", name, err)
@@ -88,7 +96,7 @@ func (r *Rabbit) declareQueue(name string, args amqp.Table) error {
 	return nil
 }
 
-func (r *Rabbit) bindQueueToExchange(queue string, bindings []string) error {
+func (r *RabbitProvider) bindQueueToExchange(queue string, bindings []string) error {
 	for _, key := range bindings {
 		if err := r.ch.QueueBind(queue, key, r.exchange, false, nil); err != nil {
 			return fmt.Errorf("bind %s -> %s: %w", key, queue, err)

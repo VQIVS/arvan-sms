@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"fmt"
+	"sms-dispatcher/api/service"
 	"sms-dispatcher/app"
 	"sms-dispatcher/config"
 
@@ -29,7 +31,8 @@ func Run(appContainer *app.App, cfg config.ServerConfig) error {
 }
 
 func registerSMSAPI(appContainer *app.App, cfg config.ServerConfig, router fiber.Router) {
-	smsServiceGetter := newSMSServiceGetter(appContainer, cfg)
-	router.Post("/sms/send", SendSMSMessage(smsServiceGetter))
-	router.Get("/sms/:id", GetSMSMessage(smsServiceGetter))
+	internalSvc := appContainer.SMSService(context.Background())
+	apiSvc := service.NewSMSService(internalSvc)
+	router.Post("/sms/send", SendSMSMessage(apiSvc))
+	router.Get("/sms/:id", GetSMSMessage(apiSvc))
 }
