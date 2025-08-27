@@ -53,7 +53,7 @@ func (s *service) UserBalanceUpdate(ctx context.Context, user event.UserBalanceE
 		return err
 	}
 	logger.GetTracedLogger().Info("publishing user balance update", "userID", user.UserID, "amount", user.Amount)
-	return s.rabbit.Publish(body, constants.KeyBalanceUpdate)
+	return s.rabbit.Publish(constants.KeyBalanceUpdate, constants.Exchange, body)
 }
 
 func (s *service) UpdateSMSStatus(ctx context.Context, body []byte) error {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
+	"syscall"
+	"time"
+
 	"sms-dispatcher/api/handler/consumer"
 	"sms-dispatcher/app"
 	"sms-dispatcher/config"
@@ -12,28 +14,82 @@ import (
 )
 
 func main() {
+	logger := logger.GetTracedLogger()
 	cfg := config.MustReadConfig("config.json")
 
+	// Create application
 	a, err := app.NewApp(cfg)
 	if err != nil {
-		log.Fatalf("failed to create app: %v", err)
-	}
-
-	h := consumer.New(a)
-	logger.GetTracedLogger().Info("consumer started")
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
-	defer stop()
-
-	defer func() {
-		if a.Rabbit() != nil {
-			logger.GetTracedLogger().Info("closing rabbit connection")
-			a.Rabbit().Close()
-		}
-	}()
-
-	if err := h.Start(ctx); err != nil {
-		log.Printf("consumer stopped with error: %v", err)
+		logger.Error("failed to create app", "error", err)
 		os.Exit(1)
 	}
+
+	defer cleanup(a, logger)
+	h := consumer.NewHandler(a)
+
+	// Setup graceful shutdown
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	defer cancel()
+
+	logger.Info("starting SMS consumer")
+
+	// Start consumer in a goroutine
+	done := make(chan error, 1)
+	go func() {
+		done <- h.Start(ctx)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			logger.Error("consumer stopped with error", "error", err)
+			os.Exit(1)
+		}
+		logger.Info("consumer completed successfully")
+
+	case <-ctx.Done():
+		logger.Info("shutdown signal received, stopping consumer")
+
+		if err := h.Stop(); err != nil {
+			logger.Error("failed to stop consumer gracefully", "error", err)
+		}
+
+		// Wait for consumer to finish with timeout
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutdownCancel()
+
+		select {
+		case err := <-done:
+			if err != nil && err != context.Canceled {
+				logger.Error("consumer stopped with error during shutdown", "error", err)
+			} else {
+				logger.Info("consumer stopped gracefully")
+			}
+		case <-shutdownCtx.Done():
+			logger.Warn("consumer shutdown timed out")
+		}
+	}
+}
+
+func cleanup(a app.App, logger interface {
+	Info(string, ...any)
+	Error(string, ...any)
+}) {
+	logger.Info("cleaning up resources")
+
+	if a != nil && a.Rabbit() != nil {
+		logger.Info("closing rabbit connection")
+		if err := a.Rabbit().Close(); err != nil {
+			logger.Error("failed to close rabbit connection", "error", err)
+		} else {
+			logger.Info("rabbit connection closed successfully")
+		}
+	}
+
+	logger.Info("cleanup completed")
 }

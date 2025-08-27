@@ -85,7 +85,7 @@ func NewApp(cfg config.Config) (App, error) {
 			return nil, err
 		}
 		a.rabbit = r
-		if err := a.rabbit.InitQueues(constants.KeySMSUpdate); err != nil {
+		if err := a.rabbit.InitQueues([]string{constants.KeySMSUpdate}); err != nil {
 			return nil, err
 		}
 	}

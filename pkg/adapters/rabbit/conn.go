@@ -1,6 +1,7 @@
 package rabbit
 
 import (
+	"fmt"
 	"log/slog"
 	"sms-dispatcher/pkg/constants"
 	"sms-dispatcher/pkg/logger"
@@ -33,34 +34,43 @@ func NewRabbit(url string, customLogger *slog.Logger) (*Rabbit, error) {
 	return &Rabbit{Conn: conn, Ch: ch, Logger: log}, nil
 }
 
-func (r *Rabbit) Close() {
+func (r *Rabbit) Close() error {
 	if r.Ch != nil {
-		_ = r.Ch.Close()
-		_ = r.Conn.Close()
+		if err := r.Ch.Close(); err != nil {
+			return err
+		}
 	}
+	if r.Conn != nil {
+		return r.Conn.Close()
+	}
+	return nil
 }
 
-func (r *Rabbit) InitQueues(queue string) error {
+func (r *Rabbit) InitQueues(keys []string) error {
 	if r == nil || r.Ch == nil {
 		return nil
 	}
-	queueName := GetQueueName(queue)
-	_, err := r.Ch.QueueDeclare(
-		queueName,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
 
-	if err := r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.Exchange, false, nil); err != nil {
-		return err
+	for _, queue := range keys {
+		queueName := GetQueueName(queue)
+		_, err := r.Ch.QueueDeclare(
+			queueName,
+			true,
+			false,
+			false,
+			false,
+			nil,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
+		}
+
+		if err := r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.Exchange, false, nil); err != nil {
+			return fmt.Errorf("failed to bind queue %s: %w", queueName, err)
+		}
 	}
-	if err != nil {
-		return err
-	}
-	return err
+
+	return nil
 }
 
 func GetQueueName(key string) string {
