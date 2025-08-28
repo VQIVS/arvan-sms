@@ -69,8 +69,8 @@ func (h *Handler) Start(ctx context.Context) error {
 	return h.handleGracefulShutdown(ctx)
 }
 
-func (h *Handler) createMessageHandler() func(amqp.Delivery) {
-	return func(delivery amqp.Delivery) {
+func (h *Handler) createMessageHandler() func(amqp.Delivery) error {
+	return func(delivery amqp.Delivery) error {
 		startTime := time.Now()
 		h.logger.Info("processing message",
 			"queue", rabbit.GetQueueName(constants.KeySMSUpdate),
@@ -84,13 +84,14 @@ func (h *Handler) createMessageHandler() func(amqp.Delivery) {
 				"message_id", delivery.MessageId,
 				"processing_time", time.Since(startTime),
 			)
-			return
+			return err
 		}
 
 		h.logger.Debug("message processed successfully",
 			"message_id", delivery.MessageId,
 			"processing_time", time.Since(startTime),
 		)
+		return nil
 	}
 }
 

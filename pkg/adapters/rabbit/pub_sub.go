@@ -31,7 +31,7 @@ func (r *Rabbit) Publish(routingKey, exchange string, body []byte) error {
 	return nil
 }
 
-func (r *Rabbit) Subscribe(queueName string, handler func(amqp.Delivery)) (<-chan amqp.Delivery, error) {
+func (r *Rabbit) Subscribe(queueName string, handler func(amqp.Delivery) error) (<-chan amqp.Delivery, error) {
 	err := r.Ch.Qos(1, 0, false)
 	if err != nil {
 		return nil, err
@@ -53,8 +53,7 @@ func (r *Rabbit) Subscribe(queueName string, handler func(amqp.Delivery)) (<-cha
 	go func() {
 		for d := range deliveries {
 			retryOperation := func() (struct{}, error) {
-				handler(d)
-				return struct{}{}, nil
+				return struct{}{}, handler(d)
 			}
 
 			backOff := backoff.NewExponentialBackOff()
@@ -63,7 +62,6 @@ func (r *Rabbit) Subscribe(queueName string, handler func(amqp.Delivery)) (<-cha
 
 			_, err := backoff.Retry(context.TODO(), retryOperation, backoff.WithBackOff(backOff))
 			if err != nil {
-
 				d.Nack(false, true)
 			} else {
 				d.Ack(false)
