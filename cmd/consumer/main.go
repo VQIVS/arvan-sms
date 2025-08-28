@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,9 +14,15 @@ import (
 	"sms-dispatcher/pkg/logger"
 )
 
+var configPath = flag.String("config", "config.json", "service configuration file")
+
 func main() {
+	flag.Parse()
 	logger := logger.GetTracedLogger()
-	cfg := config.MustReadConfig("config.json")
+	if v := os.Getenv("CONFIG_PATH"); len(v) > 0 {
+		*configPath = v
+	}
+	cfg := config.MustReadConfig(*configPath)
 
 	// Create application
 	a, err := app.NewApp(cfg)
