@@ -6,6 +6,8 @@ import (
 	"sms-dispatcher/internal/sms/domain"
 	"sms-dispatcher/internal/sms/event"
 	"sms-dispatcher/internal/sms/port"
+
+	"github.com/google/uuid"
 )
 
 type SMSService struct {
@@ -23,15 +25,16 @@ func (s *SMSService) SendSMS(ctx context.Context, req *presenter.SendSMSReq) (*p
 	if err != nil {
 		return nil, err
 	}
+	//FIXME: Define amount in some where better
 	err = s.svc.UserBalanceUpdate(
 		ctx,
 		event.UserBalanceEvent{
-			Domain: event.SMS,
-			UserID: req.UserID,
-			SMSID:  uint(id),
-			//FIXME: Define amount in some where better
-			Amount: 1,
-			Type:   event.SMSCreditEvent,
+			Domain:  event.SMS,
+			EventID: uuid.New(),
+			UserID:  req.UserID,
+			SMSID:   uint(id),
+			Amount:  1,
+			Type:    event.SMSCreditEvent,
 		},
 	)
 
