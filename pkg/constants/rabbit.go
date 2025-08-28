@@ -6,4 +6,5 @@ const (
 	// TODO: Implement user refund
 	KeyUserRefund = "sms.user.refund"
 	TopicExchange = "amq.topic"
+	ServiceName   = "sms"
 )

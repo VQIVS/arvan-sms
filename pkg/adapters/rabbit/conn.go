@@ -74,5 +74,5 @@ func (r *Rabbit) InitQueues(keys []string) error {
 }
 
 func GetQueueName(key string) string {
-	return "sms_" + key
+	return constants.ServiceName + "_" + key
 }
