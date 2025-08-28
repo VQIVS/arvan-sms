@@ -44,18 +44,6 @@ func (s *service) GetSMSByFilter(ctx context.Context, filter *domain.SMSFilter) 
 	}
 	return sms, nil
 }
-func (s *service) UserBalanceUpdate(ctx context.Context, user event.UserBalanceEvent) error {
-	if s.rabbit == nil {
-		return nil
-	}
-	body, err := json.Marshal(user)
-	if err != nil {
-		return err
-	}
-	logger.GetTracedLogger().Info("publishing user balance update", "userID", user.UserID, "amount", user.Amount)
-	return s.rabbit.Publish(constants.KeyBalanceUpdate, constants.Exchange, body)
-}
-
 func (s *service) UpdateSMSStatus(ctx context.Context, body []byte) error {
 	var sms event.SMSUpdateEvent
 	if err := json.Unmarshal(body, &sms); err != nil {
@@ -86,4 +74,19 @@ func (s *service) UpdateSMSStatus(ctx context.Context, body []byte) error {
 
 	return s.repo.Update(ctx, *smsDomain)
 
+}
+
+// publishers
+func (s *service) RefundUserBalance(ctx context.Context, body []byte) error {
+	return nil
+}
+
+// saga pattern
+func (s *service) DebitUserBalance(ctx context.Context, user event.DebitBalanceEvent) error {
+	body, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+	logger.GetTracedLogger().Info("publishing user refund", "userID", user.UserID, "amount", user.Amount)
+	return s.rabbit.Publish(constants.KeyBalanceUpdate, constants.TopicExchange, body)
 }

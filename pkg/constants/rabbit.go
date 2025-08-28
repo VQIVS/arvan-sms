@@ -3,5 +3,7 @@ package constants
 const (
 	KeySMSUpdate     = "finance.balance.update"
 	KeyBalanceUpdate = "sms.status.update"
-	Exchange         = "amq.topic"
+	// TODO: Implement user refund
+	KeyUserRefund = "sms.user.refund"
+	TopicExchange = "amq.topic"
 )

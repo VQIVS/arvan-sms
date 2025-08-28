@@ -65,7 +65,7 @@ func (r *Rabbit) InitQueues(keys []string) error {
 			return fmt.Errorf("failed to declare queue %s: %w", queueName, err)
 		}
 
-		if err := r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.Exchange, false, nil); err != nil {
+		if err := r.Ch.QueueBind(queueName, constants.KeySMSUpdate, constants.TopicExchange, false, nil); err != nil {
 			return fmt.Errorf("failed to bind queue %s: %w", queueName, err)
 		}
 	}

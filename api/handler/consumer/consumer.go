@@ -74,21 +74,19 @@ func (h *Handler) createMessageHandler() func(amqp.Delivery) error {
 		startTime := time.Now()
 		h.logger.Info("processing message",
 			"queue", rabbit.GetQueueName(constants.KeySMSUpdate),
-			"message_id", delivery.MessageId,
 			"body_size", len(delivery.Body),
 		)
 
-		if err := h.smsService.UpdateSMSStatus(context.Background(), delivery.Body); err != nil {
+		err := h.smsService.UpdateSMSStatus(context.Background(), delivery.Body)
+		if err != nil {
+			// TODO: Publish to DLQ then consume and refund the user OR publish to refund queue
 			h.logger.Error("failed to process message",
 				"error", err,
-				"message_id", delivery.MessageId,
 				"processing_time", time.Since(startTime),
 			)
 			return err
 		}
-
 		h.logger.Debug("message processed successfully",
-			"message_id", delivery.MessageId,
 			"processing_time", time.Since(startTime),
 		)
 		return nil

@@ -26,9 +26,9 @@ func (s *SMSService) SendSMS(ctx context.Context, req *presenter.SendSMSReq) (*p
 		return nil, err
 	}
 	//FIXME: Define amount in some where better
-	err = s.svc.UserBalanceUpdate(
+	err = s.svc.DebitUserBalance(
 		ctx,
-		event.UserBalanceEvent{
+		event.DebitBalanceEvent{
 			Domain:  event.SMS,
 			EventID: uuid.New(),
 			UserID:  req.UserID,
