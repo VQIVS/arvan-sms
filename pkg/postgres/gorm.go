@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"fmt"
-	"sms-dispatcher/pkg/adapters/storage/types"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -31,9 +30,4 @@ func NewPsqlGormConnection(opt DBConnOptions) (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(opt.PostgresDSN()), &gorm.Config{
 		Logger: logger.Discard,
 	})
-}
-
-func Migrate(db *gorm.DB) error {
-	migrator := db.Migrator()
-	return migrator.AutoMigrate(&types.SMS{})
 }
