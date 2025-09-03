@@ -1,0 +1,27 @@
+server:
+  host: "localhost"
+  port: 8080
+
+
+DB:
+  host: "localhost"
+  port: 5432
+  username: "user"
+  password: "password"
+  database: "sms_db"
+
+rabbitmq:
+  host: "localhost"
+  port: 5672
+  username: "guest"
+  password: "guest"
+  queues:
+    - name: "sms_debit_queue"
+      exchange: "amq.topic"
+      routing: "sms.debit.balance"
+    - name: "sms_refund_queue"
+      exchange: "amq.topic"
+      routing: "sms.refund.balance"
+    - name: "sms_delivered_queue"
+      exchange: "amq.topic"
+      routing: "sms.delivered"
