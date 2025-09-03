@@ -22,14 +22,14 @@ func NewPublisher(conn *RabbitConn) *Publisher {
 	}
 }
 
-func (p *Publisher) Publish(queueName, exchange string, body interface{}) error {
+func (p *Publisher) Publish(routingKey, exchange string, body interface{}) error {
 	bodyJson, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
 	return p.rabbitConn.Ch.Publish(
 		exchange,
-		queueName,
+		routingKey,
 		false,
 		false,
 		amqp.Publishing{

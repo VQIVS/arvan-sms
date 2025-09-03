@@ -1,9 +1,25 @@
 package sms
 
-import "time"
+import (
+	"context"
+	"time"
+)
+
+type EventType string
+
+const (
+	EventTypeDebit     EventType = "Debit"
+	EventTypeRefund    EventType = "Refund"
+	EventTypeDelivered EventType = "Delivered"
+	EventTypeFailed    EventType = "Failed"
+)
+
+type Publisher interface {
+	PublishEvent(ctx context.Context, event SMSEvent) error
+}
 
 type SMSEvent interface {
-	EventType() string
+	EventType() EventType
 	AggregateID() string
 }
 
@@ -21,12 +37,23 @@ type SMSFailed struct {
 	TimeStamp   time.Time `json:"timestamp"`
 }
 
-func (e SMSDelivered) EventType() string {
-	return "SMSDelivered"
+type DebitUserBalance struct {
+	UserID    string    `json:"user_id"`
+	SMSID     string    `json:"sms_id"`
+	Amount    float64   `json:"amount"`
+	TimeStamp time.Time `json:"timestamp"`
 }
 
-func (e SMSFailed) EventType() string {
-	return "SMSFailed"
+func (e SMSDelivered) EventType() EventType {
+	return EventTypeDelivered
+}
+
+func (e SMSFailed) EventType() EventType {
+	return EventTypeFailed
+}
+
+func (e DebitUserBalance) EventType() EventType {
+	return EventTypeDebit
 }
 
 func (e SMSDelivered) AggregateID() string {
@@ -34,5 +61,9 @@ func (e SMSDelivered) AggregateID() string {
 }
 
 func (e SMSFailed) AggregateID() string {
+	return e.SMSID
+}
+
+func (e DebitUserBalance) AggregateID() string {
 	return e.SMSID
 }

@@ -25,9 +25,21 @@ func (r *SMSRepository) WithTx(tx *gorm.DB) sms.Repo {
 	}
 }
 
-func (r *SMSRepository) GetByID(ctx context.Context, ID string) (*sms.SMSMessage, error) {
+func (r *SMSRepository) GetByFilter(ctx context.Context, filter sms.Filter) (*sms.SMSMessage, error) {
 	var sms types.SMS
-	if err := r.Db.WithContext(ctx).Where("id = ?", ID).First(&sms).Error; err != nil {
+	query := r.Db.WithContext(ctx)
+	if filter.ID != nil {
+		query = query.Where("id = ?", *filter.ID)
+	}
+	if filter.Status != nil {
+		query = query.Where("status = ?", *filter.Status)
+	}
+
+	if filter.UserID != nil {
+		query = query.Where("user_id = ?", *filter.UserID)
+	}
+
+	if err := query.First(&sms).Error; err != nil {
 		return nil, err
 	}
 	return mapper.TODomain(sms), nil
