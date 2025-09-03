@@ -1,4 +1,4 @@
-package middlewares
+package http
 
 import (
 	"sms/pkg/logger"
@@ -6,7 +6,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func FiberTraceMiddleware() fiber.Handler {
+// TODO: make this private
+func SetTraceID() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := logger.WithTraceID(c.Context())
 		c.SetUserContext(ctx)

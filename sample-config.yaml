@@ -22,6 +22,8 @@ rabbitmq:
     - name: "sms_refund_queue"
       exchange: "amq.topic"
       routing: "sms.refund.balance"
+
+    # for notify service (planned not implemented)
     - name: "sms_delivered_queue"
       exchange: "amq.topic"
       routing: "sms.delivered"
