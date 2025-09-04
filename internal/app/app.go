@@ -17,7 +17,7 @@ type app struct {
 	db         *gorm.DB
 	cfg        config.Config
 	rabbitConn *rabbit.RabbitConn
-	smsService *sms.UseCase
+	smsService *sms.Service
 }
 
 func (a *app) Config() config.Config {
@@ -32,7 +32,7 @@ func (a *app) RabbitConn() *rabbit.RabbitConn {
 	return a.rabbitConn
 }
 
-func (a *app) SMSService(ctx context.Context) *sms.UseCase {
+func (a *app) SMSService(ctx context.Context) *sms.Service {
 	return a.smsService
 }
 
@@ -58,10 +58,10 @@ func NewMustApp(cfg config.Config) App {
 	return app
 }
 
-func setService(db *gorm.DB, rabbitConn *rabbit.RabbitConn) *sms.UseCase {
+func setService(db *gorm.DB, rabbitConn *rabbit.RabbitConn) *sms.Service {
 	smsRepo := storage.NewSMSRepository(db)
 	smsPublisher := messaging.NewSMSPublisher(rabbitConn)
-	return sms.NewSMSUseCase(smsRepo, smsPublisher, db)
+	return sms.NewSMSService(smsRepo, smsPublisher, db)
 }
 
 func (a *app) setDB() error {

@@ -12,10 +12,10 @@ import (
 )
 
 type SMSHandler struct {
-	smsUseCase *sms.UseCase
+	smsUseCase *sms.Service
 }
 
-func NewSMSHandler(smsUseCase *sms.UseCase) *SMSHandler {
+func NewSMSHandler(smsUseCase *sms.Service) *SMSHandler {
 	return &SMSHandler{
 		smsUseCase: smsUseCase,
 	}

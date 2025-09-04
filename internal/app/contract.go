@@ -13,5 +13,5 @@ type App interface {
 	Config() config.Config
 	DB() *gorm.DB
 	RabbitConn() *rabbit.RabbitConn
-	SMSService(ctx context.Context) *sms.UseCase
+	SMSService(ctx context.Context) *sms.Service
 }

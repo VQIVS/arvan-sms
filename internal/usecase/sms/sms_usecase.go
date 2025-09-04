@@ -8,23 +8,23 @@ import (
 	"gorm.io/gorm"
 )
 
-type UseCase struct {
+type Service struct {
 	smsRepo   sms.Repo
 	publisher sms.Publisher
 }
 
-func NewSMSUseCase(smsRepo sms.Repo, publisher sms.Publisher, db *gorm.DB) *UseCase {
-	return &UseCase{
+func NewSMSService(smsRepo sms.Repo, publisher sms.Publisher, db *gorm.DB) *Service {
+	return &Service{
 		smsRepo:   smsRepo.WithTx(db),
 		publisher: publisher,
 	}
 }
 
-func (u *UseCase) GetSMSByID(ctx context.Context, filter sms.Filter) (*sms.SMSMessage, error) {
+func (u *Service) GetSMSByID(ctx context.Context, filter sms.Filter) (*sms.SMSMessage, error) {
 	return u.smsRepo.GetByFilter(ctx, filter)
 }
 
-func (u *UseCase) ProcessSMS(ctx context.Context, smsMsg *sms.SMSMessage) error {
+func (u *Service) ProcessSMS(ctx context.Context, smsMsg *sms.SMSMessage) error {
 	err := u.smsRepo.Create(ctx, smsMsg)
 	if err != nil {
 		return err
