@@ -2,7 +2,7 @@ package config
 
 type Config struct {
 	Server   Server   `yaml:"server"`
-	Database DBConfig `yaml:"database"`
+	DB       DB       `yaml:"database"`
 	RabbitMQ RabbitMQ `yaml:"rabbitmq"`
 }
 
@@ -12,11 +12,8 @@ type Server struct {
 }
 
 type RabbitMQ struct {
-	Host     string  `yaml:"host"`
-	Port     int     `yaml:"port"`
-	Username string  `yaml:"username"`
-	Password string  `yaml:"password"`
-	Queues   []Queue `yaml:"queues"`
+	URI    string  `yaml:"uri"`
+	Queues []Queue `yaml:"queues"`
 }
 
 type Queue struct {
@@ -25,10 +22,11 @@ type Queue struct {
 	Routing  string `yaml:"routing"`
 }
 
-type DBConfig struct {
+type DB struct {
 	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	Username string `yaml:"username"`
+	Port     uint   `yaml:"port"`
+	User     string `yaml:"username"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database"`
+	Schema   string `yaml:"schema"`
 }

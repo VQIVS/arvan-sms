@@ -7,7 +7,7 @@ import (
 )
 
 // TODO: make this private
-func SetTraceID() fiber.Handler {
+func setTraceID() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := logger.WithTraceID(c.Context())
 		c.SetUserContext(ctx)
