@@ -5,6 +5,7 @@ import (
 	"sms/config"
 	"sms/internal/infra/messaging"
 	"sms/internal/infra/storage"
+	"sms/internal/infra/storage/types"
 	"sms/internal/usecase/sms"
 	"sms/pkg/postgres"
 	"sms/pkg/rabbit"
@@ -72,7 +73,11 @@ func (a *app) setDB() error {
 		DBName: a.cfg.DB.Database,
 		Schema: a.cfg.DB.Schema,
 	})
-
+	if err != nil {
+		return err
+	}
+	// Auto migrate
+	err = postgres.Migrate(db, &types.SMS{})
 	if err != nil {
 		return err
 	}

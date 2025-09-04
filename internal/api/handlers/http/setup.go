@@ -6,7 +6,11 @@ import (
 	"sms/config"
 	"sms/internal/app"
 
+	"sms/docs"
+
+	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func Run(appContainer app.App, cfg config.Server) error {
@@ -15,6 +19,11 @@ func Run(appContainer app.App, cfg config.Server) error {
 	})
 
 	registerSMSRoutes(appContainer, router)
+	docs.SwaggerInfo.Host = ""
+	docs.SwaggerInfo.Schemes = []string{}
+	docs.SwaggerInfo.BasePath = "/api/v1"
+
+	router.Get("/swagger/*", adaptor.HTTPHandler(httpSwagger.Handler()))
 
 	return router.Listen(fmt.Sprintf(":%d", cfg.Port))
 }
@@ -25,17 +34,13 @@ func registerSMSRoutes(appContainer app.App, router fiber.Router) {
 
 	smsHandler := NewSMSHandler(smsUseCase)
 
-	// API v1 routes
 	v1 := router.Group("/api/v1")
 
 	// SMS routes
 	sms := v1.Group("/sms")
 	sms.Post("/", setTraceID(), smsHandler.SendSMS)
-	sms.Get("/:id", setTraceID(), smsHandler.GetSMS)
-
 }
 
-// customErrorHandler handles errors consistently
 func customErrorHandler(c *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
 

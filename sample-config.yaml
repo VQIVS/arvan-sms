@@ -3,18 +3,15 @@ server:
   port: 8080
 
 
-DB:
+database:
   host: "localhost"
-  port: 5432
-  username: "user"
-  password: "password"
-  database: "sms_db"
+  port: 5433
+  username: "postgres"
+  password: "postgres"
+  database: "sms"
 
 rabbitmq:
-  host: "localhost"
-  port: 5672
-  username: "guest"
-  password: "guest"
+  uri: "amqp://guest:guest@localhost:5672/"
   queues:
     - name: "sms_debit_queue"
       exchange: "amq.topic"
@@ -22,8 +19,6 @@ rabbitmq:
     - name: "sms_refund_queue"
       exchange: "amq.topic"
       routing: "sms.refund.balance"
-
-    # for notify service (planned not implemented)
     - name: "sms_delivered_queue"
       exchange: "amq.topic"
       routing: "sms.delivered"

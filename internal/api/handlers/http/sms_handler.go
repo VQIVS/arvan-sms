@@ -21,6 +21,17 @@ func NewSMSHandler(smsUseCase *sms.UseCase) *SMSHandler {
 	}
 }
 
+// SendSMS godoc
+// @Summary Send an SMS message
+// @Description Send an SMS message to a specified receiver
+// @Tags SMS
+// @Accept json
+// @Produce json
+// @Param sms body dto.SendSMSRequest true "SMS request payload"
+// @Success 201 {object} dto.SendSMSResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /sms [post]
 func (h *SMSHandler) SendSMS(c *fiber.Ctx) error {
 	var req dto.SendSMSRequest
 
@@ -28,13 +39,6 @@ func (h *SMSHandler) SendSMS(c *fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(dto.ErrorResponse{
 			Error:   "invalid_request",
 			Message: "Invalid request body",
-		})
-	}
-
-	if req.Content == "" || req.Receiver == "" || req.UserID == "" {
-		return c.Status(http.StatusBadRequest).JSON(dto.ErrorResponse{
-			Error:   "validation_error",
-			Message: "content, receiver, and user_id are required",
 		})
 	}
 
@@ -62,92 +66,4 @@ func (h *SMSHandler) SendSMS(c *fiber.Ctx) error {
 		CreatedAt: smsMessage.CreatedAt,
 		Message:   "SMS queued for processing",
 	})
-}
-
-func (h *SMSHandler) GetSMS(c *fiber.Ctx) error {
-	smsID := c.Params("id")
-	if smsID == "" {
-		return c.Status(http.StatusBadRequest).JSON(dto.ErrorResponse{
-			Error:   "invalid_request",
-			Message: "SMS ID is required",
-		})
-	}
-
-	filter := smsdomain.Filter{
-		ID: &smsID,
-	}
-
-	ctx := c.Context()
-	smsMessage, err := h.smsUseCase.GetSMSByID(ctx, filter)
-	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "SMS not found",
-		})
-	}
-
-	response := dto.GetSMSResponse{
-		ID:        smsMessage.ID,
-		UserID:    smsMessage.UserID,
-		Content:   smsMessage.Content,
-		Receiver:  smsMessage.Receiver,
-		Provider:  smsMessage.Provider,
-		Status:    string(smsMessage.Status),
-		CreatedAt: smsMessage.CreatedAt,
-		UpdatedAt: smsMessage.UpdatedAt,
-	}
-
-	if !smsMessage.DeliveredAt.IsZero() {
-		response.DeliveredAt = &smsMessage.DeliveredAt
-	}
-
-	if smsMessage.FailureCode != "" {
-		response.FailureCode = smsMessage.FailureCode
-	}
-
-	return c.JSON(response)
-}
-
-func (h *SMSHandler) GetUserSMS(c *fiber.Ctx) error {
-	userID := c.Params("userID")
-	if userID == "" {
-		return c.Status(http.StatusBadRequest).JSON(dto.ErrorResponse{
-			Error:   "invalid_request",
-			Message: "User ID is required",
-		})
-	}
-
-	filter := smsdomain.Filter{
-		UserID: &userID,
-	}
-
-	ctx := c.Context()
-	smsMessage, err := h.smsUseCase.GetSMSByID(ctx, filter)
-	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(dto.ErrorResponse{
-			Error:   "not_found",
-			Message: "No SMS found for this user",
-		})
-	}
-
-	response := dto.GetSMSResponse{
-		ID:        smsMessage.ID,
-		UserID:    smsMessage.UserID,
-		Content:   smsMessage.Content,
-		Receiver:  smsMessage.Receiver,
-		Provider:  smsMessage.Provider,
-		Status:    string(smsMessage.Status),
-		CreatedAt: smsMessage.CreatedAt,
-		UpdatedAt: smsMessage.UpdatedAt,
-	}
-
-	if !smsMessage.DeliveredAt.IsZero() {
-		response.DeliveredAt = &smsMessage.DeliveredAt
-	}
-
-	if smsMessage.FailureCode != "" {
-		response.FailureCode = smsMessage.FailureCode
-	}
-
-	return c.JSON(response)
 }

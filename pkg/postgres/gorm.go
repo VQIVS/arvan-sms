@@ -31,3 +31,7 @@ func NewPsqlGormConnection(opt DBConnOptions) (*gorm.DB, error) {
 		Logger: logger.Discard,
 	})
 }
+
+func Migrate(db *gorm.DB, models ...interface{}) error {
+	return db.AutoMigrate(models...)
+}
