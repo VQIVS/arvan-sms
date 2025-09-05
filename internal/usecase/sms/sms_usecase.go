@@ -24,7 +24,7 @@ func (u *Service) GetSMSByID(ctx context.Context, filter sms.Filter) (*sms.SMSMe
 	return u.smsRepo.GetByFilter(ctx, filter)
 }
 
-func (u *Service) ProcessSMS(ctx context.Context, smsMsg *sms.SMSMessage) error {
+func (u *Service) CreateAndBillSMS(ctx context.Context, smsMsg *sms.SMSMessage) error {
 	err := u.smsRepo.Create(ctx, smsMsg)
 	if err != nil {
 		return err
@@ -42,5 +42,15 @@ func (u *Service) ProcessSMS(ctx context.Context, smsMsg *sms.SMSMessage) error 
 		return err
 	}
 
+	return nil
+}
+
+func (u *Service) ProcessSMSDelivery(ctx context.Context, event sms.SMSEvent) error {
+	// TODO: add consuming logic here such as [Modify SMS record and set status/Send to MNO]
+	return nil
+}
+
+func (u *Service) DispatchSMSDelivery(ctx context.Context) error {
+	// TODO:this function sends the sms to MNO operators and returns an err
 	return nil
 }
