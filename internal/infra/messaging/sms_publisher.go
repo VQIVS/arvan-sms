@@ -7,11 +7,11 @@ import (
 	"sms/pkg/rabbit"
 )
 
-const exchange = "amq.topic"
-
-// TODO: don't hardcode this here
-const debitRoutingKey = "sms.debit.balance"
-const refundRoutingKey = "sms.refund.balance"
+const (
+	debitRoutingKey  = "sms.debit.balance"
+	refundRoutingKey = "sms.refund.balance"
+	exchange         = "amq.topic"
+)
 
 type SMSPublisher struct {
 	publisher *rabbit.Publisher
