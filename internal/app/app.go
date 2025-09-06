@@ -44,9 +44,15 @@ func NewApp(cfg config.Config) (App, error) {
 	if err := a.setDB(); err != nil {
 		return nil, err
 	}
+
 	if err := a.setRabbitConn(); err != nil {
 		return nil, err
 	}
+
+	if err := a.initQueues(); err != nil {
+		return nil, err
+	}
+
 	a.smsService = setService(a.db, a.rabbitConn)
 	return a, nil
 }
@@ -91,5 +97,15 @@ func (a *app) setDB() error {
 func (a *app) setRabbitConn() error {
 	rabbitConn := rabbit.NewRabbitConn(a.cfg.RabbitMQ.URI)
 	a.rabbitConn = rabbitConn
+	return nil
+}
+
+func (a *app) initQueues() error {
+	for _, q := range a.cfg.RabbitMQ.Queues {
+		err := a.rabbitConn.DeclareBindQueue(q.Name, q.Exchange, q.Routing)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
