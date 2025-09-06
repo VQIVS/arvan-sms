@@ -10,10 +10,10 @@ import (
 
 type Service struct {
 	smsRepo   sms.Repo
-	publisher sms.Publisher
+	publisher sms.EventPublisher
 }
 
-func NewSMSService(smsRepo sms.Repo, publisher sms.Publisher, db *gorm.DB) *Service {
+func NewSMSService(smsRepo sms.Repo, publisher sms.EventPublisher, db *gorm.DB) *Service {
 	return &Service{
 		smsRepo:   smsRepo.WithTx(db),
 		publisher: publisher,
@@ -30,7 +30,7 @@ func (u *Service) CreateAndBillSMS(ctx context.Context, smsMsg *sms.SMSMessage) 
 		return err
 	}
 
-	debitEvent := sms.DebitUserBalance{
+	debitEvent := sms.RequestSMSBilling{
 		UserID:    smsMsg.UserID,
 		SMSID:     smsMsg.ID,
 		Amount:    1,
@@ -45,12 +45,33 @@ func (u *Service) CreateAndBillSMS(ctx context.Context, smsMsg *sms.SMSMessage) 
 	return nil
 }
 
-func (u *Service) ProcessSMSDelivery(ctx context.Context, event sms.SMSEvent) error {
-	// TODO: add consuming logic here such as [Modify SMS record and set status/Send to MNO]
+func (u *Service) ProcessDebitedSMS(ctx context.Context, event sms.SMSBillingCompleted) error {
+	smsMsg, err := u.smsRepo.GetByFilter(ctx, sms.Filter{ID: &event.SMSID})
+	if err != nil {
+		return err
+	}
+	provider, err := u.dispatchSMSDelivery(ctx, *smsMsg)
+	if err != nil {
+		smsMsg.MarkAsFailed(provider, sms.MNOProviderFailed)
+		refundMsg := sms.RequestBillingRefund{
+			TransactionID: event.TransactionID,
+			TimeStamp:     time.Now(),
+		}
+		err = u.publisher.PublishEvent(ctx, refundMsg)
+		if err != nil {
+			return err
+		}
+	}
+	smsMsg.MarkAsSent(provider)
+	err = u.smsRepo.Update(ctx, smsMsg.ID, smsMsg)
+	if err != nil {
+		return err
+	}
 	return nil
+
 }
 
-func (u *Service) DispatchSMSDelivery(ctx context.Context) error {
-	// TODO:this function sends the sms to MNO operators and returns an err
-	return nil
+func (u *Service) dispatchSMSDelivery(ctx context.Context, sms sms.SMSMessage) (string, error) {
+	//TODO: create mock providers and then implement this function
+	return "MockProvider", nil
 }

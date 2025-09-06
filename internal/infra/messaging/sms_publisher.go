@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	debitRoutingKey  = "sms.debit.balance"
-	refundRoutingKey = "sms.refund.balance"
-	exchange         = "amq.topic"
+	billingRequestedRoutingKey = "sms.billing.requested"
+	billingRefundedRoutingKey  = "sms.billing.refunded"
+	exchange                   = "amq.topic"
 )
 
 type SMSPublisher struct {
@@ -18,18 +18,18 @@ type SMSPublisher struct {
 	//TODO: add logger
 }
 
-func NewSMSPublisher(conn *rabbit.RabbitConn) sms.Publisher {
+func NewSMSPublisher(conn *rabbit.RabbitConn) sms.EventPublisher {
 	return &SMSPublisher{
 		publisher: rabbit.NewPublisher(conn),
 	}
 }
 
-func (p *SMSPublisher) PublishEvent(ctx context.Context, event sms.SMSEvent) error {
+func (p *SMSPublisher) PublishEvent(ctx context.Context, event sms.DomainEvent) error {
 	switch event.EventType() {
-	case sms.EventTypeDebit:
-		return p.publisher.Publish(debitRoutingKey, exchange, event)
-	case sms.EventTypeRefund:
-		return p.publisher.Publish(refundRoutingKey, exchange, event)
+	case sms.EventTypeBillingRequested:
+		return p.publisher.Publish(billingRequestedRoutingKey, exchange, event)
+	case sms.EventTypeBillingRefunded:
+		return p.publisher.Publish(billingRefundedRoutingKey, exchange, event)
 	default:
 		return fmt.Errorf("unknown event type: %s", event.EventType())
 	}

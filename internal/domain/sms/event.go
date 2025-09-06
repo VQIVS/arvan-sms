@@ -2,68 +2,82 @@ package sms
 
 import (
 	"context"
+	"math/big"
 	"time"
 )
 
 type EventType string
 
 const (
-	EventTypeDebit     EventType = "Debit"
-	EventTypeRefund    EventType = "Refund"
-	EventTypeDelivered EventType = "Delivered"
-	EventTypeFailed    EventType = "Failed"
+	EventTypeBillingRequested EventType = "BillingRequested"
+	EventTypeBillingCompleted EventType = "BillingCompleted"
+	EventTypeBillingRefunded  EventType = "BillingRefunded"
 )
 
-type Publisher interface {
-	PublishEvent(ctx context.Context, event SMSEvent) error
+type EventPublisher interface {
+	PublishEvent(ctx context.Context, event DomainEvent) error
 }
 
-type SMSEvent interface {
+type DomainEvent interface {
 	EventType() EventType
+
 	AggregateID() string
+
+	Timestamp() time.Time
 }
 
-type SMSDelivered struct {
-	SMSID     string    `json:"sms_id"`
-	Provider  string    `json:"provider"`
-	TimeStamp time.Time `json:"timestamp"`
-}
-
-type SMSFailed struct {
-	SMSID       string    `json:"sms_id"`
-	Provider    string    `json:"provider"`
-	FailureCode string    `json:"failure_code"`
-	Reason      string    `json:"reason"`
-	TimeStamp   time.Time `json:"timestamp"`
-}
-
-type DebitUserBalance struct {
+type RequestSMSBilling struct {
 	UserID    string    `json:"user_id"`
 	SMSID     string    `json:"sms_id"`
 	Amount    float64   `json:"amount"`
 	TimeStamp time.Time `json:"timestamp"`
 }
 
-func (e SMSDelivered) EventType() EventType {
-	return EventTypeDelivered
+func (e RequestSMSBilling) EventType() EventType {
+	return EventTypeBillingRequested
 }
 
-func (e SMSFailed) EventType() EventType {
-	return EventTypeFailed
-}
-
-func (e DebitUserBalance) EventType() EventType {
-	return EventTypeDebit
-}
-
-func (e SMSDelivered) AggregateID() string {
+func (e RequestSMSBilling) AggregateID() string {
 	return e.SMSID
 }
 
-func (e SMSFailed) AggregateID() string {
+func (e RequestSMSBilling) Timestamp() time.Time {
+	return e.TimeStamp
+}
+
+type SMSBillingCompleted struct {
+	UserID        string    `json:"user_id"`
+	SMSID         string    `json:"sms_id"`
+	Amount        big.Int   `json:"amount"`
+	TransactionID string    `json:"transaction_id"`
+	TimeStamp     time.Time `json:"timestamp"`
+}
+
+func (e SMSBillingCompleted) EventType() EventType {
+	return EventTypeBillingCompleted
+}
+
+func (e SMSBillingCompleted) AggregateID() string {
 	return e.SMSID
 }
 
-func (e DebitUserBalance) AggregateID() string {
-	return e.SMSID
+func (e SMSBillingCompleted) Timestamp() time.Time {
+	return e.TimeStamp
+}
+
+type RequestBillingRefund struct {
+	TransactionID string    `json:"transaction_id"`
+	TimeStamp     time.Time `json:"timestamp"`
+}
+
+func (e RequestBillingRefund) EventType() EventType {
+	return EventTypeBillingRefunded
+}
+
+func (e RequestBillingRefund) AggregateID() string {
+	return e.TransactionID
+}
+
+func (e RequestBillingRefund) Timestamp() time.Time {
+	return e.TimeStamp
 }

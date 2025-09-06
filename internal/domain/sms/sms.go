@@ -50,6 +50,10 @@ func (s *SMSMessage) MarkAsSent(provider string) {
 	s.UpdatedAt = now
 }
 
+const (
+	MNOProviderFailed = "MNOProviderFailed"
+)
+
 func (s *SMSMessage) MarkAsFailed(provider string, code string) {
 	s.Status = SMSStatusFailed
 	s.Provider = provider
