@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"sms/config"
+	"sms/internal/infra/external"
 	"sms/internal/infra/messaging"
 	"sms/internal/infra/storage"
 	"sms/internal/infra/storage/types"
@@ -61,7 +62,8 @@ func NewMustApp(cfg config.Config) App {
 func setService(db *gorm.DB, rabbitConn *rabbit.RabbitConn) *sms.Service {
 	smsRepo := storage.NewSMSRepository(db)
 	smsPublisher := messaging.NewSMSPublisher(rabbitConn)
-	return sms.NewSMSService(smsRepo, smsPublisher, db)
+	smsProvider := external.DefaultSMSProvider()
+	return sms.NewSMSService(smsRepo, smsPublisher, smsProvider, db)
 }
 
 func (a *app) setDB() error {

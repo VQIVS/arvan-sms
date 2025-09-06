@@ -11,12 +11,14 @@ import (
 type Service struct {
 	smsRepo   sms.Repo
 	publisher sms.EventPublisher
+	provider  sms.SMSProvider
 }
 
-func NewSMSService(smsRepo sms.Repo, publisher sms.EventPublisher, db *gorm.DB) *Service {
+func NewSMSService(smsRepo sms.Repo, publisher sms.EventPublisher, provider sms.SMSProvider, db *gorm.DB) *Service {
 	return &Service{
 		smsRepo:   smsRepo.WithTx(db),
 		publisher: publisher,
+		provider:  provider,
 	}
 }
 
@@ -31,8 +33,9 @@ func (u *Service) CreateAndBillSMS(ctx context.Context, smsMsg *sms.SMSMessage) 
 	}
 
 	debitEvent := sms.RequestSMSBilling{
-		UserID:    smsMsg.UserID,
-		SMSID:     smsMsg.ID,
+		UserID: smsMsg.UserID,
+		SMSID:  smsMsg.ID,
+		//TODO: do not hardcode amount
 		Amount:    1,
 		TimeStamp: time.Now(),
 	}
@@ -53,6 +56,7 @@ func (u *Service) ProcessDebitedSMS(ctx context.Context, event sms.SMSBillingCom
 	provider, err := u.dispatchSMSDelivery(ctx, *smsMsg)
 	if err != nil {
 		smsMsg.MarkAsFailed(provider, sms.MNOProviderFailed)
+		// refunding user
 		refundMsg := sms.RequestBillingRefund{
 			TransactionID: event.TransactionID,
 			TimeStamp:     time.Now(),
@@ -63,6 +67,8 @@ func (u *Service) ProcessDebitedSMS(ctx context.Context, event sms.SMSBillingCom
 		}
 	}
 	smsMsg.MarkAsSent(provider)
+
+	// updating sent sms object
 	err = u.smsRepo.Update(ctx, smsMsg.ID, smsMsg)
 	if err != nil {
 		return err
@@ -71,7 +77,6 @@ func (u *Service) ProcessDebitedSMS(ctx context.Context, event sms.SMSBillingCom
 
 }
 
-func (u *Service) dispatchSMSDelivery(ctx context.Context, sms sms.SMSMessage) (string, error) {
-	//TODO: create mock providers and then implement this function
-	return "MockProvider", nil
+func (u *Service) dispatchSMSDelivery(ctx context.Context, message sms.SMSMessage) (string, error) {
+	return u.provider.SendSMS(ctx, &message)
 }
