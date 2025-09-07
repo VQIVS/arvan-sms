@@ -2,7 +2,6 @@ package sms
 
 import (
 	"context"
-	"math/big"
 	"sms/internal/domain/sms"
 	"time"
 
@@ -37,7 +36,7 @@ func (u *Service) CreateAndBillSMS(ctx context.Context, smsMsg *sms.SMSMessage) 
 		UserID: smsMsg.UserID,
 		SMSID:  smsMsg.ID,
 		//TODO: do not hardcode amount
-		Amount:    *big.NewInt(1),
+		Amount:    1,
 		TimeStamp: time.Now(),
 	}
 	// TODO: use OutBox or update the sms failed.

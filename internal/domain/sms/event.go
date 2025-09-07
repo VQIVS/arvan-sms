@@ -2,7 +2,6 @@ package sms
 
 import (
 	"context"
-	"math/big"
 	"time"
 )
 
@@ -29,7 +28,7 @@ type DomainEvent interface {
 type RequestSMSBilling struct {
 	UserID    string    `json:"user_id"`
 	SMSID     string    `json:"sms_id"`
-	Amount    big.Int   `json:"amount"`
+	Amount    int64     `json:"amount"`
 	TimeStamp time.Time `json:"timestamp"`
 }
 
@@ -48,7 +47,7 @@ func (e RequestSMSBilling) Timestamp() time.Time {
 type SMSBillingCompleted struct {
 	UserID        string    `json:"user_id"`
 	SMSID         string    `json:"sms_id"`
-	Amount        big.Int   `json:"amount"`
+	Amount        string    `json:"amount"` // Use string to preserve precision
 	TransactionID string    `json:"transaction_id"`
 	TimeStamp     time.Time `json:"timestamp"`
 }

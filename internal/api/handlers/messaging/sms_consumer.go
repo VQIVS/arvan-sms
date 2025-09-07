@@ -51,12 +51,11 @@ func (h *ConsumerHandler) Run(ctx context.Context) error {
 	for _, queue := range h.config.RabbitMQ.Queues {
 		switch queue.Name {
 		//TODO: change to correct queue name and do not hardcode here
-		case "sms_debit_queue":
+		case rabbit.SMSBillingCompletedQueue:
 			h.consumer.Subscribe(queue.Name, func(message []byte) error {
 				return h.HandleDebitedSMS(ctx, message)
 			})
 			h.log.Logger.Info("subscribed to queue", "queue", queue.Name)
-
 		default:
 			h.log.Logger.Warn("unknown queue in configuration", "queue", queue.Name)
 		}

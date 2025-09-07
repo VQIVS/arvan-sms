@@ -49,7 +49,7 @@ func (l *Logger) Info(ctx context.Context, msg string, args ...any) {
 	if traceID != "" {
 		args = append(args, slog.String(string(TraceIDKey), traceID))
 	}
-	l.Logger.Error(msg, args...)
+	l.Logger.Info(msg, args...)
 }
 
 func (l *Logger) ErrorWithoutContext(msg string, args ...any) {

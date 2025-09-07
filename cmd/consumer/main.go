@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"flag"
 	"os"
 	"os/signal"
 	"sms/config"
@@ -12,34 +12,29 @@ import (
 	"syscall"
 )
 
+var configPath = flag.String("config", "config.yaml", "service configuration file")
+
 func main() {
-	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == "" {
-		configPath = "config.yaml"
-	}
-	// Load configuration
-	cfg, err := config.ReadConfig(configPath)
-	if err != nil {
-		log.Fatalf("Failed to read config: %v", err)
+	flag.Parse()
+
+	if v := os.Getenv("CONFIG_PATH"); len(v) > 0 {
+		*configPath = v
 	}
 
+	c := config.MustReadConfig(*configPath)
 	appLogger := logger.NewLogger(logger.LogLevel("info"))
 
-	application, err := app.NewApp(cfg)
-	if err != nil {
-		appLogger.ErrorWithoutContext("Failed to initialize app", "error", err)
-		os.Exit(1)
-	}
+	appContainer := app.NewMustApp(c)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	ctx = logger.WithTraceID(ctx)
 
-	smsService := application.SMSService(ctx)
+	smsService := appContainer.SMSService(ctx)
+	consumer := messaging.NewSMSConsumer(*smsService, appLogger, appContainer.RabbitConn(), appContainer.Config())
 
-	consumer := messaging.NewSMSConsumer(*smsService, appLogger, application.RabbitConn(), application.Config())
-
+	// Graceful shutdown handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
