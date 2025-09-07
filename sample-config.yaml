@@ -13,9 +13,8 @@ database:
 rabbitmq:
   uri: "amqp://guest:guest@localhost:5672/"
   queues:
-    # These queues are the queues that finance service should listen to
-    #TODO: change me
-    - name: "sms_sms.billing.requested"
+    # These queues are the queues that sms service should listen to
+    - name: "sms_billing.debit.completed"
       exchange: "amq.topic"
-      routing_key: "sms.billing.requested"
- 
+      routing_key: "billing.debit.completed"
+
