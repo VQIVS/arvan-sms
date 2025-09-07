@@ -3,298 +3,324 @@ package tests
 import (
 	"context"
 	"errors"
-	"sms-dispatcher/api/presenter"
-	"sms-dispatcher/api/service"
-	"sms-dispatcher/internal/sms/domain"
-	"sms-dispatcher/internal/sms/event"
+	"sms/internal/domain/sms"
+	smsService "sms/internal/usecase/sms"
+	"sms/pkg/logger"
 	"testing"
 	"time"
+
+	"gorm.io/gorm"
 )
 
-func TestSMSService_SendSMS_Success(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
+type mockSMSRepo struct {
+	messages    map[string]*sms.SMSMessage
+	createError error
+	getError    error
+	updateError error
+}
 
-	expectedSMSID := domain.SMSID(123)
-	req := &presenter.SendSMSReq{
-		UserID:    1,
-		Recipient: "+1234567890",
-		Message:   "Test message",
+func newMockSMSRepo() *mockSMSRepo {
+	return &mockSMSRepo{
+		messages: make(map[string]*sms.SMSMessage),
+	}
+}
+
+func (m *mockSMSRepo) GetByFilter(ctx context.Context, filter sms.Filter) (*sms.SMSMessage, error) {
+	if m.getError != nil {
+		return nil, m.getError
 	}
 
-	mockSvc.CreateSMSFunc = func(ctx context.Context, recipient string, message string) (domain.SMSID, error) {
-		if recipient != req.Recipient {
-			t.Errorf("Expected recipient %s, got %s", req.Recipient, recipient)
+	if filter.ID != nil {
+		if msg, exists := m.messages[*filter.ID]; exists {
+			return msg, nil
 		}
-		if message != req.Message {
-			t.Errorf("Expected message %s, got %s", req.Message, message)
-		}
-		return expectedSMSID, nil
+		return nil, gorm.ErrRecordNotFound
 	}
 
-	mockSvc.UserBalanceUpdateFunc = func(ctx context.Context, user event.UserBalanceEvent) error {
-		expectedEvent := event.UserBalanceEvent{
-			Domain: event.SMS,
-			UserID: req.UserID,
-			SMSID:  uint(expectedSMSID),
-			Amount: 1,
-			Type:   event.SMSCreditEvent,
+	for _, msg := range m.messages {
+		if filter.Status != nil && msg.Status != *filter.Status {
+			continue
 		}
-
-		if user.Domain != expectedEvent.Domain {
-			t.Errorf("Expected domain %s, got %s", expectedEvent.Domain, user.Domain)
+		if filter.UserID != nil && msg.UserID != *filter.UserID {
+			continue
 		}
-		if user.UserID != expectedEvent.UserID {
-			t.Errorf("Expected UserID %d, got %d", expectedEvent.UserID, user.UserID)
-		}
-		if user.SMSID != expectedEvent.SMSID {
-			t.Errorf("Expected SMSID %d, got %d", expectedEvent.SMSID, user.SMSID)
-		}
-		if user.Amount != expectedEvent.Amount {
-			t.Errorf("Expected Amount %f, got %f", expectedEvent.Amount, user.Amount)
-		}
-		if user.Type != expectedEvent.Type {
-			t.Errorf("Expected Type %s, got %s", expectedEvent.Type, user.Type)
-		}
-
-		return nil
+		return msg, nil
 	}
 
-	resp, err := smsService.SendSMS(context.Background(), req)
+	return nil, gorm.ErrRecordNotFound
+}
+
+func (m *mockSMSRepo) Create(ctx context.Context, message *sms.SMSMessage) error {
+	if m.createError != nil {
+		return m.createError
+	}
+	m.messages[message.ID] = message
+	return nil
+}
+
+func (m *mockSMSRepo) Update(ctx context.Context, ID string, message *sms.SMSMessage) error {
+	if m.updateError != nil {
+		return m.updateError
+	}
+	m.messages[ID] = message
+	return nil
+}
+
+func (m *mockSMSRepo) WithTx(tx *gorm.DB) sms.Repo {
+	return m
+}
+
+type mockEventPublisher struct {
+	publishedEvents []sms.DomainEvent
+	publishError    error
+}
+
+func newMockEventPublisher() *mockEventPublisher {
+	return &mockEventPublisher{
+		publishedEvents: make([]sms.DomainEvent, 0),
+	}
+}
+
+func (m *mockEventPublisher) PublishEvent(ctx context.Context, event sms.DomainEvent) error {
+	if m.publishError != nil {
+		return m.publishError
+	}
+	m.publishedEvents = append(m.publishedEvents, event)
+	return nil
+}
+
+type mockSMSProvider struct {
+	sendError    error
+	providerName string
+}
+
+func newMockSMSProvider() *mockSMSProvider {
+	return &mockSMSProvider{
+		providerName: "mock-provider",
+	}
+}
+
+func (m *mockSMSProvider) SendSMS(ctx context.Context, message *sms.SMSMessage) (string, error) {
+	if m.sendError != nil {
+		return m.providerName, m.sendError
+	}
+	return m.providerName, nil
+}
+
+func TestSMSService_CreateAndBillSMS_Success(t *testing.T) {
+	repo := newMockSMSRepo()
+	publisher := newMockEventPublisher()
+	provider := newMockSMSProvider()
+	log := logger.NewLogger("info")
+	service := smsService.NewSMSService(repo, publisher, provider, &gorm.DB{}, log)
+
+	message := &sms.SMSMessage{
+		ID:       "test-sms-id",
+		UserID:   "user-123",
+		Content:  "Test message",
+		Receiver: "+1234567890",
+		Status:   sms.SMSStatusPending,
+	}
+
+	ctx := context.Background()
+
+	err := service.CreateAndBillSMS(ctx, message)
 
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if resp == nil {
-		t.Fatal("Expected response, got nil")
+	if _, exists := repo.messages[message.ID]; !exists {
+		t.Error("Expected message to be created in repository")
 	}
 
-	if resp.Status != presenter.Pending {
-		t.Errorf("Expected status %s, got %s", presenter.Pending, resp.Status)
+	if len(publisher.publishedEvents) != 1 {
+		t.Errorf("Expected 1 published event, got %d", len(publisher.publishedEvents))
 	}
 
-	if resp.Message != "SMS created successfully" {
-		t.Errorf("Expected message 'SMS created successfully', got %s", resp.Message)
-	}
-}
-
-func TestSMSService_SendSMS_CreateSMSError(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
-
-	req := &presenter.SendSMSReq{
-		UserID:    1,
-		Recipient: "+1234567890",
-		Message:   "Test message",
+	billingEvent, ok := publisher.publishedEvents[0].(sms.RequestSMSBilling)
+	if !ok {
+		t.Error("Expected published event to be RequestSMSBilling")
 	}
 
-	expectedError := errors.New("failed to create SMS")
-	mockSvc.CreateSMSFunc = func(ctx context.Context, recipient string, message string) (domain.SMSID, error) {
-		return 0, expectedError
+	if billingEvent.UserID != message.UserID {
+		t.Errorf("Expected billing event UserID to be %s, got %s", message.UserID, billingEvent.UserID)
 	}
-
-	resp, err := smsService.SendSMS(context.Background(), req)
-
-	if err != expectedError {
-		t.Errorf("Expected error %v, got %v", expectedError, err)
-	}
-
-	if resp != nil {
-		t.Errorf("Expected nil response, got %v", resp)
+	if billingEvent.SMSID != message.ID {
+		t.Errorf("Expected billing event SMSID to be %s, got %s", message.ID, billingEvent.SMSID)
 	}
 }
 
-func TestSMSService_SendSMS_UserBalanceUpdateError(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
+func TestSMSService_CreateAndBillSMS_RepoError(t *testing.T) {
+	repo := newMockSMSRepo()
+	repo.createError = errors.New("database error")
+	publisher := newMockEventPublisher()
+	provider := newMockSMSProvider()
+	log := logger.NewLogger("info")
+	service := smsService.NewSMSService(repo, publisher, provider, &gorm.DB{}, log)
 
-	req := &presenter.SendSMSReq{
-		UserID:    1,
-		Recipient: "+1234567890",
-		Message:   "Test message",
+	message := &sms.SMSMessage{
+		ID:       "test-sms-id",
+		UserID:   "user-123",
+		Content:  "Test message",
+		Receiver: "+1234567890",
+		Status:   sms.SMSStatusPending,
 	}
 
-	mockSvc.CreateSMSFunc = func(ctx context.Context, recipient string, message string) (domain.SMSID, error) {
-		return domain.SMSID(123), nil
+	ctx := context.Background()
+
+	err := service.CreateAndBillSMS(ctx, message)
+
+	if err == nil {
+		t.Error("Expected error, got nil")
 	}
 
-	expectedError := errors.New("failed to update user balance")
-	mockSvc.UserBalanceUpdateFunc = func(ctx context.Context, user event.UserBalanceEvent) error {
-		return expectedError
-	}
-
-	resp, err := smsService.SendSMS(context.Background(), req)
-
-	if err != expectedError {
-		t.Errorf("Expected error %v, got %v", expectedError, err)
-	}
-
-	if resp != nil {
-		t.Errorf("Expected nil response, got %v", resp)
+	if len(publisher.publishedEvents) != 0 {
+		t.Errorf("Expected no published events, got %d", len(publisher.publishedEvents))
 	}
 }
 
-func TestSMSService_GetSMSMessage_Success(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
+func TestSMSService_CreateAndBillSMS_PublishError(t *testing.T) {
+	repo := newMockSMSRepo()
+	publisher := newMockEventPublisher()
+	publisher.publishError = errors.New("publish error")
+	provider := newMockSMSProvider()
+	log := logger.NewLogger("info")
+	service := smsService.NewSMSService(repo, publisher, provider, &gorm.DB{}, log)
 
-	smsID := uint(123)
-	expectedSMS := &domain.SMS{
-		ID:        domain.SMSID(smsID),
-		Recipient: "+1234567890",
-		Message:   "Test message",
-		Status:    string(domain.Delivered),
-		CreatedAt: time.Now(),
+	message := &sms.SMSMessage{
+		ID:       "test-sms-id",
+		UserID:   "user-123",
+		Content:  "Test message",
+		Receiver: "+1234567890",
+		Status:   sms.SMSStatusPending,
 	}
 
-	mockSvc.GetSMSByFilterFunc = func(ctx context.Context, filter *domain.SMSFilter) (*domain.SMS, error) {
-		if filter.ID != domain.SMSID(smsID) {
-			t.Errorf("Expected SMS ID %d, got %d", smsID, filter.ID)
-		}
-		return expectedSMS, nil
+	ctx := context.Background()
+
+	err := service.CreateAndBillSMS(ctx, message)
+
+	if err == nil {
+		t.Error("Expected error, got nil")
 	}
 
-	resp, err := smsService.GetSMSMessage(context.Background(), smsID)
+	if _, exists := repo.messages[message.ID]; !exists {
+		t.Error("Expected message to be created in repository")
+	}
+}
+
+func TestSMSService_ProcessDebitedSMS_Success(t *testing.T) {
+	repo := newMockSMSRepo()
+	publisher := newMockEventPublisher()
+	provider := newMockSMSProvider()
+	log := logger.NewLogger("info")
+	service := smsService.NewSMSService(repo, publisher, provider, &gorm.DB{}, log)
+
+	message := &sms.SMSMessage{
+		ID:       "test-sms-id",
+		UserID:   "user-123",
+		Content:  "Test message",
+		Receiver: "+1234567890",
+		Status:   sms.SMSStatusPending,
+	}
+	repo.messages[message.ID] = message
+
+	event := sms.SMSBillingCompleted{
+		UserID:        "user-123",
+		SMSID:         "test-sms-id",
+		Amount:        1,
+		TransactionID: "txn-123",
+		TimeStamp:     time.Now(),
+	}
+
+	ctx := context.Background()
+
+	err := service.ProcessDebitedSMS(ctx, event)
 
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if resp == nil {
-		t.Fatal("Expected response, got nil")
+	updatedMessage := repo.messages[message.ID]
+	if updatedMessage.Status != sms.SMSStatusDelivered {
+		t.Errorf("Expected message status to be %s, got %s", sms.SMSStatusDelivered, updatedMessage.Status)
 	}
-
-	if resp.ID != uint(expectedSMS.ID) {
-		t.Errorf("Expected ID %d, got %d", expectedSMS.ID, resp.ID)
-	}
-
-	if resp.Recipient != expectedSMS.Recipient {
-		t.Errorf("Expected recipient %s, got %s", expectedSMS.Recipient, resp.Recipient)
-	}
-
-	if resp.Message != expectedSMS.Message {
-		t.Errorf("Expected message %s, got %s", expectedSMS.Message, resp.Message)
-	}
-
-	if resp.Status != presenter.Status(expectedSMS.Status) {
-		t.Errorf("Expected status %s, got %s", expectedSMS.Status, resp.Status)
+	if updatedMessage.Provider != provider.providerName {
+		t.Errorf("Expected provider to be %s, got %s", provider.providerName, updatedMessage.Provider)
 	}
 }
 
-func TestSMSService_GetSMSMessage_Error(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
+func TestSMSService_ProcessDebitedSMS_DeliveryFailure(t *testing.T) {
+	repo := newMockSMSRepo()
+	publisher := newMockEventPublisher()
+	provider := newMockSMSProvider()
+	provider.sendError = errors.New("network error")
+	log := logger.NewLogger("info")
+	service := smsService.NewSMSService(repo, publisher, provider, &gorm.DB{}, log)
 
-	smsID := uint(123)
-	expectedError := errors.New("SMS not found")
+	message := &sms.SMSMessage{
+		ID:       "test-sms-id",
+		UserID:   "user-123",
+		Content:  "Test message",
+		Receiver: "+1234567890",
+		Status:   sms.SMSStatusPending,
+	}
+	repo.messages[message.ID] = message
 
-	mockSvc.GetSMSByFilterFunc = func(ctx context.Context, filter *domain.SMSFilter) (*domain.SMS, error) {
-		return nil, expectedError
+	event := sms.SMSBillingCompleted{
+		UserID:        "user-123",
+		SMSID:         "test-sms-id",
+		Amount:        1,
+		TransactionID: "txn-123",
+		TimeStamp:     time.Now(),
 	}
 
-	resp, err := smsService.GetSMSMessage(context.Background(), smsID)
+	ctx := context.Background()
 
-	if err != expectedError {
-		t.Errorf("Expected error %v, got %v", expectedError, err)
-	}
-
-	if resp != nil {
-		t.Errorf("Expected nil response, got %v", resp)
-	}
-}
-
-func TestNewSMSService(t *testing.T) {
-	mockSvc := &MockService{}
-
-	smsService := service.NewSMSService(mockSvc)
-
-	if smsService == nil {
-		t.Fatal("Expected SMS service instance, got nil")
-	}
-}
-
-func TestSMSService_SendSMS_EmptyRecipient(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
-
-	req := &presenter.SendSMSReq{
-		UserID:    1,
-		Recipient: "",
-		Message:   "Test message",
-	}
-
-	mockSvc.CreateSMSFunc = func(ctx context.Context, recipient string, message string) (domain.SMSID, error) {
-		return domain.SMSID(123), nil
-	}
-
-	mockSvc.UserBalanceUpdateFunc = func(ctx context.Context, user event.UserBalanceEvent) error {
-		return nil
-	}
-
-	resp, err := smsService.SendSMS(context.Background(), req)
+	err := service.ProcessDebitedSMS(ctx, event)
 
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if resp.Status != presenter.Pending {
-		t.Errorf("Expected status %s, got %s", presenter.Pending, resp.Status)
+	updatedMessage := repo.messages[message.ID]
+	if updatedMessage.Status != sms.SMSStatusFailed {
+		t.Errorf("Expected message status to be %s, got %s", sms.SMSStatusFailed, updatedMessage.Status)
+	}
+	if updatedMessage.FailureCode != sms.MNOProviderFailed {
+		t.Errorf("Expected failure code to be %s, got %s", sms.MNOProviderFailed, updatedMessage.FailureCode)
+	}
+
+	if len(publisher.publishedEvents) != 1 {
+		t.Errorf("Expected 1 published event, got %d", len(publisher.publishedEvents))
+	}
+
+	refundEvent, ok := publisher.publishedEvents[0].(sms.RequestBillingRefund)
+	if !ok {
+		t.Error("Expected published event to be RequestBillingRefund")
+	}
+	if refundEvent.TransactionID != event.TransactionID {
+		t.Errorf("Expected refund TransactionID to be %s, got %s", event.TransactionID, refundEvent.TransactionID)
 	}
 }
 
-func TestSMSService_SendSMS_EmptyMessage(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
+func TestSMSService_GetSMSByID_NotFound(t *testing.T) {
+	repo := newMockSMSRepo()
+	publisher := newMockEventPublisher()
+	provider := newMockSMSProvider()
+	log := logger.NewLogger("info")
+	service := smsService.NewSMSService(repo, publisher, provider, &gorm.DB{}, log)
 
-	req := &presenter.SendSMSReq{
-		UserID:    1,
-		Recipient: "+1234567890",
-		Message:   "",
+	nonExistentID := "non-existent-id"
+	filter := sms.Filter{ID: &nonExistentID}
+	ctx := context.Background()
+
+	result, err := service.GetSMSByID(ctx, filter)
+
+	if err == nil {
+		t.Error("Expected error, got nil")
 	}
-
-	mockSvc.CreateSMSFunc = func(ctx context.Context, recipient string, message string) (domain.SMSID, error) {
-		return domain.SMSID(123), nil
-	}
-
-	mockSvc.UserBalanceUpdateFunc = func(ctx context.Context, user event.UserBalanceEvent) error {
-		return nil
-	}
-
-	resp, err := smsService.SendSMS(context.Background(), req)
-
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-
-	if resp.Status != presenter.Pending {
-		t.Errorf("Expected status %s, got %s", presenter.Pending, resp.Status)
-	}
-}
-
-func TestSMSService_GetSMSMessage_ZeroID(t *testing.T) {
-	mockSvc := &MockService{}
-	smsService := service.NewSMSService(mockSvc)
-
-	mockSvc.GetSMSByFilterFunc = func(ctx context.Context, filter *domain.SMSFilter) (*domain.SMS, error) {
-		if filter.ID != domain.SMSID(0) {
-			t.Errorf("Expected SMS ID 0, got %d", filter.ID)
-		}
-		return &domain.SMS{
-			ID:        domain.SMSID(0),
-			Recipient: "+1234567890",
-			Message:   "Test message",
-			Status:    string(domain.Pending),
-		}, nil
-	}
-
-	resp, err := smsService.GetSMSMessage(context.Background(), 0)
-
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-
-	if resp.ID != 0 {
-		t.Errorf("Expected ID 0, got %d", resp.ID)
+	if result != nil {
+		t.Error("Expected no message to be returned")
 	}
 }

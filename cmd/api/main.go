@@ -4,12 +4,12 @@ import (
 	"flag"
 	"log"
 	"os"
-	"sms-dispatcher/api/handler/http"
-	"sms-dispatcher/app"
-	"sms-dispatcher/config"
+	"sms/config"
+	"sms/internal/api/handlers/http"
+	"sms/internal/app"
 )
 
-var configPath = flag.String("config", "config.json", "service configuration file")
+var configPath = flag.String("config", "config.yaml", "service configuration file")
 
 func main() {
 	flag.Parse()
@@ -17,7 +17,6 @@ func main() {
 	if v := os.Getenv("CONFIG_PATH"); len(v) > 0 {
 		*configPath = v
 	}
-
 	c := config.MustReadConfig(*configPath)
 
 	appContainer := app.NewMustApp(c)

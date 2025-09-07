@@ -1,0 +1,20 @@
+server:
+  host: "localhost"
+  port: 8080
+
+
+database:
+  host: "localhost"
+  port: 5433
+  username: "postgres"
+  password: "postgres"
+  database: "sms"
+
+rabbitmq:
+  uri: "amqp://guest:guest@localhost:5672/"
+  queues:
+    # These queues are the queues that sms service should listen to
+    - name: "sms_billing.debit.completed"
+      exchange: "amq.topic"
+      routing_key: "billing.debit.completed"
+

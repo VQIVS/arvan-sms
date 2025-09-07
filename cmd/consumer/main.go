@@ -2,38 +2,58 @@ package main
 
 import (
 	"context"
-	"log"
+	"flag"
 	"os"
 	"os/signal"
-	"sms-dispatcher/api/handler/consumer"
-	"sms-dispatcher/app"
-	"sms-dispatcher/config"
-	"sms-dispatcher/pkg/logger"
+	"sms/config"
+	"sms/internal/api/handlers/messaging"
+	"sms/internal/app"
+	"sms/pkg/logger"
+	"syscall"
 )
 
-func main() {
-	cfg := config.MustReadConfig("config.json")
+var configPath = flag.String("config", "config.yaml", "service configuration file")
 
-	a, err := app.NewApp(cfg)
-	if err != nil {
-		log.Fatalf("failed to create app: %v", err)
+func main() {
+	flag.Parse()
+
+	if v := os.Getenv("CONFIG_PATH"); len(v) > 0 {
+		*configPath = v
 	}
 
-	h := consumer.New(a)
-	logger.GetTracedLogger().Info("consumer started")
+	c := config.MustReadConfig(*configPath)
+	appLogger := logger.NewLogger(logger.LogLevel("info"))
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
-	defer stop()
+	appContainer := app.NewMustApp(c)
 
-	defer func() {
-		if a.Rabbit() != nil {
-			logger.GetTracedLogger().Info("closing rabbit connection")
-			a.Rabbit().Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ctx = logger.WithTraceID(ctx)
+
+	smsService := appContainer.SMSService(ctx)
+	consumer := messaging.NewSMSConsumer(*smsService, appLogger, appContainer.RabbitConn(), appContainer.Config())
+
+	// Graceful shutdown handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	errChan := make(chan error, 1)
+	go func() {
+		appLogger.Logger.Info("Starting SMS consumer worker")
+		if err := consumer.Run(ctx); err != nil && err != context.Canceled {
+			errChan <- err
 		}
 	}()
 
-	if err := h.Start(ctx); err != nil {
-		log.Printf("consumer stopped with error: %v", err)
-		os.Exit(1)
+	select {
+	case sig := <-sigChan:
+		appLogger.Logger.Info("Received shutdown signal", "signal", sig)
+		cancel()
+	case err := <-errChan:
+		appLogger.Info(ctx, "Consumer error", "error", err)
+		cancel()
 	}
+
+	appLogger.Logger.Info("SMS consumer worker shutdown complete")
 }

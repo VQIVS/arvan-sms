@@ -1,36 +1,32 @@
 package config
 
 type Config struct {
-	DB     DBConfig     `json:"db"`
-	Server ServerConfig `json:"server"`
-	// Redis  RedisConfig  `json:"redis"`
-	Rabbit RabbitConfig `json:"rabbit"`
+	Server   Server   `yaml:"server"`
+	DB       DB       `yaml:"database"`
+	RabbitMQ RabbitMQ `yaml:"rabbitmq"`
 }
 
-type DBConfig struct {
-	Host     string `json:"host"`
-	Port     uint   `json:"port"`
-	Database string `json:"database"`
-	Schema   string `json:"schema"`
-	User     string `json:"user"`
-	Password string `json:"password"`
+type Server struct {
+	Host string `yaml:"host"`
+	Port int    `yaml:"port"`
 }
 
-type ServerConfig struct {
-	HttpPort uint `json:"httpPort"`
+type RabbitMQ struct {
+	URI    string  `yaml:"uri"`
+	Queues []Queue `yaml:"queues"`
 }
 
-// type RedisConfig struct {
-// 	Host string `json:"host"`
-// 	Port uint   `json:"port"`
-// }
-
-type RabbitConfig struct {
-	URL    string        `json:"url"`
-	Queues []QueueConfig `json:"queues"`
+type Queue struct {
+	Name       string `yaml:"name"`
+	Exchange   string `yaml:"exchange"`
+	RoutingKey string `yaml:"routing_key"`
 }
 
-type QueueConfig struct {
-	Name    string `json:"name"`
-	Durable bool   `json:"durable"`
+type DB struct {
+	Host     string `yaml:"host"`
+	Port     uint   `yaml:"port"`
+	User     string `yaml:"username"`
+	Password string `yaml:"password"`
+	Database string `yaml:"database"`
+	Schema   string `yaml:"schema"`
 }

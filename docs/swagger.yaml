@@ -1,117 +1,126 @@
 definitions:
-  presenter.SMSResp:
+  dto.ErrorResponse:
     properties:
-      id:
+      code:
         type: integer
+      error:
+        type: string
       message:
         type: string
-      recipient:
+    type: object
+  dto.GetSMSResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      delivered_at:
+        type: string
+      failure_code:
+        type: string
+      id:
+        type: string
+      provider:
+        type: string
+      receiver:
         type: string
       status:
-        $ref: '#/definitions/presenter.Status'
-    type: object
-  presenter.SendSMSReq:
-    properties:
-      message:
         type: string
-      recipient:
+      updated_at:
         type: string
       user_id:
-        type: integer
+        type: string
     type: object
-  presenter.SendSMSResp:
+  dto.SendSMSRequest:
     properties:
+      content:
+        maxLength: 160
+        type: string
+      receiver:
+        description: E.164 format phone number
+        type: string
+      user_id:
+        type: string
+    required:
+    - content
+    - receiver
+    - user_id
+    type: object
+  dto.SendSMSResponse:
+    properties:
+      created_at:
+        type: string
       id:
-        type: integer
+        type: string
       message:
         type: string
       status:
-        $ref: '#/definitions/presenter.Status'
+        type: string
     type: object
-  presenter.Status:
-    enum:
-    - pending
-    - success
-    - failed
-    type: string
-    x-enum-varnames:
-    - Pending
-    - Success
-    - Failed
 info:
   contact: {}
 paths:
+  /sms:
+    post:
+      consumes:
+      - application/json
+      description: Send an SMS message to a specified receiver
+      parameters:
+      - description: SMS request payload
+        in: body
+        name: sms
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SendSMSRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SendSMSResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Send an SMS message
+      tags:
+      - SMS
   /sms/{id}:
     get:
       consumes:
       - application/json
-      description: Get a SMS message by ID
+      description: Retrieve SMS message details by its ID
       parameters:
       - description: SMS ID
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/presenter.SMSResp'
+            $ref: '#/definitions/dto.GetSMSResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get SMS message
-      tags:
-      - SMS
-  /sms/send:
-    post:
-      consumes:
-      - application/json
-      description: Send a SMS message
-      parameters:
-      - description: Send SMS request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/presenter.SendSMSReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/presenter.SendSMSResp'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Send SMS message
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get an SMS message by ID
       tags:
       - SMS
 swagger: "2.0"

@@ -21,7 +21,7 @@ WORKDIR /app
 COPY --from=builder /app/sms-api ./sms-api
 COPY --from=builder /app/sms-consumer ./sms-consumer
 
-COPY config.json ./config.json
+COPY config.yaml ./config.yaml
 
 RUN chown -R appuser:appgroup /app
 

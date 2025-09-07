@@ -1,4 +1,4 @@
-module sms-dispatcher
+module sms
 
 go 1.24.4
 
@@ -9,8 +9,9 @@ require (
 	github.com/streadway/amqp v1.1.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.6.0
-	gorm.io/gorm v1.30.1
+	gorm.io/gorm v1.30.2
 )
 
 require (

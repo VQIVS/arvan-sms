@@ -15,9 +15,9 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/sms/send": {
+        "/sms": {
             "post": {
-                "description": "Send a SMS message",
+                "description": "Send an SMS message to a specified receiver",
                 "consumes": [
                     "application/json"
                 ],
@@ -27,41 +27,35 @@ const docTemplate = `{
                 "tags": [
                     "SMS"
                 ],
-                "summary": "Send SMS message",
+                "summary": "Send an SMS message",
                 "parameters": [
                     {
-                        "description": "Send SMS request",
-                        "name": "request",
+                        "description": "SMS request payload",
+                        "name": "sms",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/presenter.SendSMSReq"
+                            "$ref": "#/definitions/dto.SendSMSRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/presenter.SendSMSResp"
+                            "$ref": "#/definitions/dto.SendSMSResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -69,7 +63,7 @@ const docTemplate = `{
         },
         "/sms/{id}": {
             "get": {
-                "description": "Get a SMS message by ID",
+                "description": "Retrieve SMS message details by its ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -79,10 +73,10 @@ const docTemplate = `{
                 "tags": [
                     "SMS"
                 ],
-                "summary": "Get SMS message",
+                "summary": "Get an SMS message by ID",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "SMS ID",
                         "name": "id",
                         "in": "path",
@@ -93,34 +87,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/presenter.SMSResp"
+                            "$ref": "#/definitions/dto.GetSMSResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -128,63 +113,92 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "presenter.SMSResp": {
+        "dto.ErrorResponse": {
             "type": "object",
             "properties": {
-                "id": {
+                "code": {
                     "type": "integer"
+                },
+                "error": {
+                    "type": "string"
                 },
                 "message": {
                     "type": "string"
-                },
-                "recipient": {
-                    "type": "string"
-                },
-                "status": {
-                    "$ref": "#/definitions/presenter.Status"
                 }
             }
         },
-        "presenter.SendSMSReq": {
+        "dto.GetSMSResponse": {
             "type": "object",
             "properties": {
-                "message": {
+                "content": {
                     "type": "string"
                 },
-                "recipient": {
+                "created_at": {
+                    "type": "string"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
+                "failure_code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "receiver": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 },
                 "user_id": {
-                    "type": "integer"
+                    "type": "string"
                 }
             }
         },
-        "presenter.SendSMSResp": {
+        "dto.SendSMSRequest": {
+            "type": "object",
+            "required": [
+                "content",
+                "receiver",
+                "user_id"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "maxLength": 160
+                },
+                "receiver": {
+                    "description": "E.164 format phone number",
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.SendSMSResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "id": {
-                    "type": "integer"
+                    "type": "string"
                 },
                 "message": {
                     "type": "string"
                 },
                 "status": {
-                    "$ref": "#/definitions/presenter.Status"
+                    "type": "string"
                 }
             }
-        },
-        "presenter.Status": {
-            "type": "string",
-            "enum": [
-                "pending",
-                "success",
-                "failed"
-            ],
-            "x-enum-varnames": [
-                "Pending",
-                "Success",
-                "Failed"
-            ]
         }
     }
 }`
