@@ -72,7 +72,7 @@ func setService(db *gorm.DB, rabbitConn *rabbit.RabbitConn, log *logger.Logger) 
 	smsRepo := storage.NewSMSRepository(db)
 	smsPublisher := messaging.NewSMSPublisher(rabbitConn, log)
 	smsProvider := external.DefaultSMSProvider()
-	return sms.NewSMSService(smsRepo, smsPublisher, smsProvider, db)
+	return sms.NewSMSService(smsRepo, smsPublisher, smsProvider, db, log)
 }
 
 func (a *app) setDB() error {

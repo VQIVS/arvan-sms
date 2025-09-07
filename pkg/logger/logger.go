@@ -52,6 +52,14 @@ func (l *Logger) Info(ctx context.Context, msg string, args ...any) {
 	l.Logger.Info(msg, args...)
 }
 
+func (l *Logger) Error(ctx context.Context, msg string, args ...any) {
+	traceID := GetTraceID(ctx)
+	if traceID != "" {
+		args = append(args, slog.String(string(TraceIDKey), traceID))
+	}
+	l.Logger.Error(msg, args...)
+}
+
 func (l *Logger) ErrorWithoutContext(msg string, args ...any) {
 	l.Logger.Error(msg, args...)
 }
