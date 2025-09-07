@@ -56,7 +56,7 @@ func main() {
 		appLogger.Logger.Info("Received shutdown signal", "signal", sig)
 		cancel()
 	case err := <-errChan:
-		appLogger.Error(ctx, "Consumer error", "error", err)
+		appLogger.Info(ctx, "Consumer error", "error", err)
 		cancel()
 	}
 

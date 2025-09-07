@@ -17,9 +17,9 @@ type RabbitMQ struct {
 }
 
 type Queue struct {
-	Name     string `yaml:"name"`
-	Exchange string `yaml:"exchange"`
-	Routing  string `yaml:"routing"`
+	Name       string `yaml:"name"`
+	Exchange   string `yaml:"exchange"`
+	RoutingKey string `yaml:"routing_key"`
 }
 
 type DB struct {

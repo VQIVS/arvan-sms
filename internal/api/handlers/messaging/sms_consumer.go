@@ -30,12 +30,12 @@ func (h *ConsumerHandler) HandleDebitedSMS(ctx context.Context, message []byte) 
 	var msg smsDomain.SMSBillingCompleted
 	err := json.Unmarshal(message, &msg)
 	if err != nil {
-		h.log.Error(ctx, "failed to unmarshal message", "error", err)
+		h.log.Info(ctx, "failed to unmarshal message", "error", err)
 		return err
 	}
 	err = h.smsService.ProcessDebitedSMS(ctx, msg)
 	if err != nil {
-		h.log.Error(ctx, "failed to process debited sms", "error", err, "sms_id", msg.SMSID)
+		h.log.Info(ctx, "failed to process debited sms", "error", err, "sms_id", msg.SMSID)
 		return err
 	}
 	h.log.Logger.Info("successfully processed debited sms", "sms_id", msg.SMSID)
@@ -44,7 +44,7 @@ func (h *ConsumerHandler) HandleDebitedSMS(ctx context.Context, message []byte) 
 
 func (h *ConsumerHandler) Run(ctx context.Context) error {
 	if err := h.consumer.SetQos(1); err != nil {
-		h.log.Error(ctx, "failed to set consumer QoS", "error", err)
+		h.log.Info(ctx, "failed to set consumer QoS", "error", err)
 		return err
 	}
 
@@ -63,7 +63,7 @@ func (h *ConsumerHandler) Run(ctx context.Context) error {
 
 	h.log.Logger.Info("starting SMS consumer")
 	if err := h.consumer.StartConsume(); err != nil {
-		h.log.Error(ctx, "failed to start consumer", "error", err)
+		h.log.Info(ctx, "failed to start consumer", "error", err)
 		return err
 	}
 

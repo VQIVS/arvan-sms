@@ -52,7 +52,7 @@ func (h *SMSHandler) SendSMS(c *fiber.Ctx) error {
 		UpdatedAt: time.Now(),
 	}
 
-	ctx := c.Context()
+	ctx := c.UserContext()
 	if err := h.smsUseCase.CreateAndBillSMS(ctx, smsMessage); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(dto.ErrorResponse{
 			Error:   "processing_error",

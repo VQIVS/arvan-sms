@@ -44,7 +44,7 @@ func GetTraceID(ctx context.Context) string {
 	return ""
 }
 
-func (l *Logger) Error(ctx context.Context, msg string, args ...any) {
+func (l *Logger) Info(ctx context.Context, msg string, args ...any) {
 	traceID := GetTraceID(ctx)
 	if traceID != "" {
 		args = append(args, slog.String(string(TraceIDKey), traceID))

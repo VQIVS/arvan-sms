@@ -8,6 +8,7 @@ import (
 	"sms/internal/infra/storage"
 	"sms/internal/infra/storage/types"
 	"sms/internal/usecase/sms"
+	"sms/pkg/logger"
 	"sms/pkg/postgres"
 	"sms/pkg/rabbit"
 
@@ -19,6 +20,7 @@ type app struct {
 	cfg        config.Config
 	rabbitConn *rabbit.RabbitConn
 	smsService *sms.Service
+	logger     *logger.Logger
 }
 
 func (a *app) Config() config.Config {
@@ -39,7 +41,8 @@ func (a *app) SMSService(ctx context.Context) *sms.Service {
 
 func NewApp(cfg config.Config) (App, error) {
 	a := &app{
-		cfg: cfg,
+		cfg:    cfg,
+		logger: logger.NewLogger(""),
 	}
 	if err := a.setDB(); err != nil {
 		return nil, err
@@ -53,7 +56,7 @@ func NewApp(cfg config.Config) (App, error) {
 		return nil, err
 	}
 
-	a.smsService = setService(a.db, a.rabbitConn)
+	a.smsService = setService(a.db, a.rabbitConn, a.logger)
 	return a, nil
 }
 
@@ -65,9 +68,9 @@ func NewMustApp(cfg config.Config) App {
 	return app
 }
 
-func setService(db *gorm.DB, rabbitConn *rabbit.RabbitConn) *sms.Service {
+func setService(db *gorm.DB, rabbitConn *rabbit.RabbitConn, log *logger.Logger) *sms.Service {
 	smsRepo := storage.NewSMSRepository(db)
-	smsPublisher := messaging.NewSMSPublisher(rabbitConn)
+	smsPublisher := messaging.NewSMSPublisher(rabbitConn, log)
 	smsProvider := external.DefaultSMSProvider()
 	return sms.NewSMSService(smsRepo, smsPublisher, smsProvider, db)
 }
@@ -102,7 +105,7 @@ func (a *app) setRabbitConn() error {
 
 func (a *app) initQueues() error {
 	for _, q := range a.cfg.RabbitMQ.Queues {
-		err := a.rabbitConn.DeclareBindQueue(q.Name, q.Exchange, q.Routing)
+		err := a.rabbitConn.DeclareBindQueue(q.Name, q.Exchange, q.RoutingKey)
 		if err != nil {
 			return err
 		}
