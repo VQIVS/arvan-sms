@@ -50,6 +50,7 @@ func (h *ConsumerHandler) Run(ctx context.Context) error {
 
 	for _, queue := range h.config.RabbitMQ.Queues {
 		switch queue.Name {
+		//TODO: change to correct queue name and do not hardcode here
 		case "sms_debit_queue":
 			h.consumer.Subscribe(queue.Name, func(message []byte) error {
 				return h.HandleDebitedSMS(ctx, message)

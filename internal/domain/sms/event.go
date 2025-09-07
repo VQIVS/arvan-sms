@@ -29,7 +29,7 @@ type DomainEvent interface {
 type RequestSMSBilling struct {
 	UserID    string    `json:"user_id"`
 	SMSID     string    `json:"sms_id"`
-	Amount    float64   `json:"amount"`
+	Amount    big.Int   `json:"amount"`
 	TimeStamp time.Time `json:"timestamp"`
 }
 
