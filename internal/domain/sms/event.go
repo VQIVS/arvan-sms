@@ -47,7 +47,7 @@ func (e RequestSMSBilling) Timestamp() time.Time {
 type SMSBillingCompleted struct {
 	UserID        string    `json:"user_id"`
 	SMSID         string    `json:"sms_id"`
-	Amount        string    `json:"amount"` // Use string to preserve precision
+	Amount        int64     `json:"amount"`
 	TransactionID string    `json:"transaction_id"`
 	TimeStamp     time.Time `json:"timestamp"`
 }

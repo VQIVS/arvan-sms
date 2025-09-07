@@ -6,18 +6,34 @@ import (
 )
 
 func TODomain(model types.SMS) *sms.SMSMessage {
-	return &sms.SMSMessage{
-		ID:          model.ID,
-		UserID:      model.UserID,
-		Content:     model.Content,
-		Receiver:    model.Receiver,
-		Provider:    *model.Provider,
-		Status:      sms.SMSStatus(model.Status),
-		DeliveredAt: *model.DeliveredAt,
-		FailureCode: *model.FailureCode,
-		CreatedAt:   model.CreatedAt,
-		UpdatedAt:   model.UpdatedAt,
+	result := &sms.SMSMessage{
+		ID:        model.ID,
+		UserID:    model.UserID,
+		Content:   model.Content,
+		Receiver:  model.Receiver,
+		Status:    sms.SMSStatus(model.Status),
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
 	}
+
+	// Handle nullable fields safely
+	if model.Provider != nil {
+		result.Provider = *model.Provider
+	}
+
+	if model.DeliveredAt != nil {
+		result.DeliveredAt = *model.DeliveredAt
+	}
+
+	if model.FailureCode != nil {
+		result.FailureCode = *model.FailureCode
+	}
+
+	if model.DeletedAt != nil {
+		result.DeletedAt = *model.DeletedAt
+	}
+
+	return result
 }
 
 func TOStorage(sms sms.SMSMessage) *types.SMS {

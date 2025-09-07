@@ -67,3 +67,52 @@ func (h *SMSHandler) SendSMS(c *fiber.Ctx) error {
 		Message:   "SMS queued for processing",
 	})
 }
+
+// GetSMSByID godoc
+// @Summary Get an SMS message by ID
+// @Description Retrieve SMS message details by its ID
+// @Tags SMS
+// @Accept json
+// @Produce json
+// @Param id path string true "SMS ID"
+// @Success 200 {object} dto.GetSMSResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /sms/{id} [get]
+func (h *SMSHandler) GetSMSByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(http.StatusBadRequest).JSON(dto.ErrorResponse{
+			Error:   "invalid_request",
+			Message: "SMS ID is required",
+		})
+	}
+
+	ctx := c.UserContext()
+	smsMessage, err := h.smsUseCase.GetSMSByID(ctx, smsdomain.Filter{ID: &id})
+	if err != nil {
+		return c.Status(http.StatusNotFound).JSON(dto.ErrorResponse{
+			Error:   "not_found",
+			Message: "SMS not found",
+		})
+	}
+
+	var deliveredAt *time.Time
+	if !smsMessage.DeliveredAt.IsZero() {
+		deliveredAt = &smsMessage.DeliveredAt
+	}
+
+	return c.Status(http.StatusOK).JSON(dto.GetSMSResponse{
+		ID:          smsMessage.ID,
+		UserID:      smsMessage.UserID,
+		Content:     smsMessage.Content,
+		Receiver:    smsMessage.Receiver,
+		Provider:    smsMessage.Provider,
+		Status:      string(smsMessage.Status),
+		DeliveredAt: deliveredAt,
+		FailureCode: smsMessage.FailureCode,
+		CreatedAt:   smsMessage.CreatedAt,
+		UpdatedAt:   smsMessage.UpdatedAt,
+	})
+}

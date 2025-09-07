@@ -8,6 +8,29 @@ definitions:
       message:
         type: string
     type: object
+  dto.GetSMSResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      delivered_at:
+        type: string
+      failure_code:
+        type: string
+      id:
+        type: string
+      provider:
+        type: string
+      receiver:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
   dto.SendSMSRequest:
     properties:
       content:
@@ -65,6 +88,39 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Send an SMS message
+      tags:
+      - SMS
+  /sms/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve SMS message details by its ID
+      parameters:
+      - description: SMS ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.GetSMSResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get an SMS message by ID
       tags:
       - SMS
 swagger: "2.0"

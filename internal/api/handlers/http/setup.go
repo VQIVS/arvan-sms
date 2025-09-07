@@ -39,6 +39,7 @@ func registerSMSRoutes(appContainer app.App, router fiber.Router) {
 	// SMS routes
 	sms := v1.Group("/sms")
 	sms.Post("/", setTraceID(), smsHandler.SendSMS)
+	sms.Get("/:id", setTraceID(), smsHandler.GetSMSByID)
 }
 
 func customErrorHandler(c *fiber.Ctx, err error) error {

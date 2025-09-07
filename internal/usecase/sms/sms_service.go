@@ -3,6 +3,7 @@ package sms
 import (
 	"context"
 	"sms/internal/domain/sms"
+	"sms/pkg/logger"
 	"time"
 
 	"gorm.io/gorm"
@@ -28,6 +29,7 @@ func (u *Service) GetSMSByID(ctx context.Context, filter sms.Filter) (*sms.SMSMe
 
 func (u *Service) CreateAndBillSMS(ctx context.Context, smsMsg *sms.SMSMessage) error {
 	err := u.smsRepo.Create(ctx, smsMsg)
+	logger.NewLogger("").ErrorWithoutContext("after create sms " + smsMsg.ID)
 	if err != nil {
 		return err
 	}
@@ -74,9 +76,7 @@ func (u *Service) ProcessDebitedSMS(ctx context.Context, event sms.SMSBillingCom
 		return err
 	}
 	return nil
-
 }
-
 func (u *Service) dispatchSMSDelivery(ctx context.Context, message sms.SMSMessage) (string, error) {
 	return u.provider.SendSMS(ctx, &message)
 }
