@@ -5,5 +5,5 @@ import (
 )
 
 func DefaultSMSProvider() sms.SMSProvider {
-	return RandomFailSMSProvider(0.1)
+	return RandomFailSMSProvider(.33)
 }
